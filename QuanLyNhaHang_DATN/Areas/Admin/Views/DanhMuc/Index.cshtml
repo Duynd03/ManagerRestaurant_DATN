@@ -1,0 +1,274 @@
+﻿@model IEnumerable<QuanLyNhaHang_DATN.Models.DanhMuc>
+@{
+    ViewData["Title"] = "Quản lý danh mục";
+    Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
+    string searchTenDanhMuc = ViewBag.SearchTenDanhMuc as string;
+}
+
+<div class="col-md-12">
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex align-items-center">
+                <h4 class="card-title me-auto">Danh sách danh mục</h4>
+
+                <button id="btnSearch" class="btn btn-secondary btn-round me-2" onclick="showSearchForm()">
+                    <i class="fa fa-search"></i> Tìm kiếm
+                </button>
+
+                <button id="btnCreate" class="btn btn-primary btn-round" data-bs-toggle="modal" data-bs-target="#createModal">
+                    <i class="fa fa-plus"></i> Thêm danh mục
+                </button>
+            </div>
+        </div>
+
+        <div id="searchFormContainer" class="card p-3 mb-3" style="display: none;">
+            <form id="searchForm">
+                <div class="mb-3">
+                    <label for="searchInput" class="form-label">Tên danh mục</label>
+                    <input type="text" name="tenDanhMuc" class="form-control" value="@searchTenDanhMuc" placeholder="Nhập tên danh mục..." />
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" onclick="searchData()">
+                        <i class="bi bi-search"></i> Tìm kiếm
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="hideSearchForm()">
+                        <i class="bi bi-x-circle"></i> Đóng
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="card-body">
+            <!-- Modal Create -->
+            <div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content" id="createModalContent">
+    
+                    </div>
+                </div>
+            </div>
+            <!-- Bảng danh sách danh mục -->
+            <div class="table-responsive">
+                <div id="danhMucList">
+                    @await Html.PartialAsync("_DanhMucList", Model)
+                </div>
+
+                <div id="paginationContainer" class="mt-3">
+                    <!-- Pagination -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit -->
+<div class="modal fade" id="editModal">
+    <div class="modal-dialog">
+        <div class="modal-content" id="editModalContent"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            let currentPageIndex = 1;
+            let currentPageSize = 5;
+
+            // Gán hàm vào window để gọi từ HTML onclick
+            window.loadData = function (pageIndex = 1, pageSize = 5) {
+                let tenDanhMuc = $("input[name='tenDanhMuc']").val();
+               
+
+                $.get("/Admin/DanhMuc/GetPagedData", {
+                    pageIndex: pageIndex,
+                    pageSize: pageSize,
+                    tenDanhMuc: tenDanhMuc,
+                  
+                }, function (response) {
+                    updateTable(response.items);
+                    updatePagination(response.totalCount, response.pageIndex, response.pageSize, tenDanhMuc);
+                    currentPageIndex = pageIndex;
+                    currentPageSize = pageSize;
+                }).fail(function () {
+                    alert("Không thể tải dữ liệu. Vui lòng thử lại.");
+                });
+            }
+
+            // Hàm tìm kiếm
+            window.searchData = function () {
+                loadData(1, currentPageSize); // Reset về trang 1 khi tìm kiếm
+                hideSearchForm();
+            }
+
+            // Hàm cập nhật bảng dữ liệu
+            function updateTable(items) {
+                let html = '';
+                items.forEach(function (item) {
+                    html += `<tr>
+                                                <td>${item.id}</td>
+                                                <td>${item.tenDanhMuc}</td>
+                                                <td>${item.moTa || ''}</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-warning editBtn" data-id="${item.id}">Sửa</button>
+                                                    <button class="btn btn-sm btn-danger deleteBtn" data-id="${item.id}">Xóa</button>
+                                                </td>
+                                            </tr>`;
+                });
+                $("#danhMucList  tbody").html(html);
+            }
+
+            // Hàm cập nhật phân trang
+            function updatePagination(totalCount, pageIndex, pageSize, tenDanhMuc) {
+                let totalPages = Math.ceil(totalCount / pageSize);
+                let paginationHtml = '<nav><ul class="pagination">';
+
+                if (pageIndex > 1) {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${pageIndex - 1}, ${pageSize}); return false;">Trước</a></li>`;
+                } else {
+                    paginationHtml += '<li class="page-item disabled"><span class="page-link">Trước</span></li>';
+                }
+
+                for (let i = 1; i <= totalPages; i++) {
+                    if (i === pageIndex) {
+                        paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                    } else {
+                        paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${i}, ${pageSize}); return false;">${i}</a></li>`;
+                    }
+                }
+
+                if (pageIndex < totalPages) {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${pageIndex + 1}, ${pageSize}); return false;">Sau</a></li>`;
+                } else {
+                    paginationHtml += '<li class="page-item disabled"><span class="page-link">Sau</span></li>';
+                }
+
+                paginationHtml += '</ul></nav>';
+                $("#paginationContainer").html(paginationHtml);
+            }
+
+            // Hiển thị/Ẩn form tìm kiếm
+            window.showSearchForm = function () {
+                document.getElementById('searchFormContainer').style.display = 'block';
+            }
+
+            window.hideSearchForm = function () {
+                document.getElementById('searchFormContainer').style.display = 'none';
+            }
+
+            // Xử lý mở form Create
+            $("#btnCreate").click(function (e) {
+                e.preventDefault();
+                $.ajax({
+                    url: "/Admin/DanhMuc/Create",
+                    type: "GET",
+                    success: function (data) {
+                        $("#createModalContent").html(data);
+                        $.validator.unobtrusive.parse("#createForm");
+                        $("#createModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Không thể tải form thêm danh mục món ăn.");
+                    }
+                });
+            });
+
+            // Xử lý submit form Create
+            $(document).on("submit", "#createForm", function (e) {
+                e.preventDefault();
+                let $form = $(this);
+                if (!$form.valid()) return;
+
+                let formData = new FormData($form[0]);
+
+                $.ajax({
+                    url: "/Admin/DanhMuc/Create",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        if (response.success) {
+                            $("#createModal").modal("hide");
+                            loadData(1, currentPageSize);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi gửi yêu cầu.");
+                    }
+                });
+            });
+
+            // Xử lý Edit
+            $(document).on("click", ".editBtn", function (e) {
+                e.preventDefault();
+                let id = $(this).data("id");
+                $.ajax({
+                    url: "/Admin/DanhMuc/Edit/" + id,
+                    type: "GET",
+                    success: function (data) {
+                        $("#editModalContent").html(data);
+                        $.validator.unobtrusive.parse("#editForm");
+                        $("#editModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Không thể tải form chỉnh sửa danh mục món ăn.");
+                    }
+                });
+            });
+
+            $(document).on("submit", "#editForm", function (e) {
+                e.preventDefault();
+                let $form = $(this);
+                if (!$form.valid()) return;
+
+                let formData = new FormData($form[0]); // Dùng FormData để hỗ trợ file upload
+
+                $.ajax({
+                    url: "/Admin/DanhMuc/Edit",
+                    type: "POST",
+                    data: formData,
+                    contentType: false, // Cần thiết khi dùng FormData
+                    processData: false, // Cần thiết khi dùng FormData
+                    success: function (response) {
+                        if (response.success) {
+                            $("#editModal").modal("hide");
+                            loadData(1, currentPageSize);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi gửi yêu cầu.");
+                    }
+                });
+            });
+
+            // Xử lý Delete
+            $(document).on("click", ".deleteBtn", function () {
+                if (!confirm("Bạn có chắc muốn xóa danh mục này?")) return;
+                const id = $(this).data("id");
+
+                $.ajax({
+                    type: "POST",
+                    url: "/Admin/DanhMuc/Delete",
+                    data: { id: id },
+                    success: function (res) {
+                        if (res.success) {
+                            loadData(1, currentPageSize);
+                        } else {
+                            alert(res.message);
+                        }
+                    }
+                });
+            });
+            // Load dữ liệu ban đầu
+            loadData(1, currentPageSize);
+        });
+    </script>
+}

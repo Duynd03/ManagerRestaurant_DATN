@@ -1,0 +1,341 @@
+﻿@model IEnumerable<QuanLyNhaHang_DATN.Models.MonAn>
+@{
+    ViewData["Title"] = "Quản lý món ăn";
+    Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
+    var danhMucs = ViewBag.DanhMucList as List<QuanLyNhaHang_DATN.Models.DanhMuc>;
+    int? selectedDanhMucId = ViewBag.SelectedDanhMucId;
+    int? selectedTrangThai = ViewBag.SelectedTrangThai;
+    string searchTenMonAn = ViewBag.SearchTenMonAn as string;
+}
+
+<div class="col-md-12">
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex align-items-center">
+                <h4 class="card-title me-auto">Danh sách món ăn</h4>
+
+                <button id="btnSearch" class="btn btn-secondary btn-round me-2" onclick="showSearchForm()">
+                    <i class="fa fa-search"></i> Tìm kiếm
+                </button>
+
+                <button id="btnCreate" class="btn btn-primary btn-round" data-bs-toggle="modal" data-bs-target="#createModal">
+                    <i class="fa fa-plus"></i> Thêm món ăn
+                </button>
+            </div>
+        </div>
+
+        <!-- Form tìm kiếm -->
+        <div id="searchFormContainer" class="card p-3 mb-3" style="display: none;">
+            <form id="searchForm">
+                <div class="mb-3">
+                    <label for="searchInput" class="form-label">Tên món ăn</label>
+                    <input type="text" name="tenMonAn" class="form-control" value="@searchTenMonAn" placeholder="Nhập tên món ăn..." />
+                </div>
+
+                <div class="mb-3">
+                    <label for="danhMucId" class="form-label">Danh mục</label>
+                    <select name="danhMucId" class="form-select">
+                        <option value="">-- Tất cả --</option>
+                        @foreach (var dm in danhMucs)
+                        {
+                            <option value="@dm.Id" @(selectedDanhMucId == dm.Id ? "selected" : "")>@dm.TenDanhMuc</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="trangThai" class="form-label">Trạng thái</label>
+                    <select name="trangThai" class="form-select">
+                        <option value="">-- Tất cả --</option>
+                        <option value="1" @(selectedTrangThai == 1 ? "selected" : "")>Có sẵn</option>
+                        <option value="0" @(selectedTrangThai == 0 ? "selected" : "")>Hết hàng</option>
+                    </select>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" onclick="searchData()">
+                        <i class="bi bi-search"></i> Tìm kiếm
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="hideSearchForm()">
+                        <i class="bi bi-x-circle"></i> Đóng
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-body">
+            <!-- Modal Create -->
+            <div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content" id="createModalContent">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danh sách món ăn -->
+            <div class="table-responsive">
+                <div id="monAnList">
+                    @await Html.PartialAsync("_MonAnList", Model)
+                </div>
+
+                <div id="paginationContainer" class="mt-3">
+                    <!-- Pagination  -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit -->
+<div class="modal fade" id="editModal">
+    <div class="modal-dialog">
+        <div class="modal-content" id="editModalContent"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            let currentPageIndex = 1;
+            let currentPageSize = 5;
+
+            // Gán hàm vào window để gọi từ HTML onclick
+            window.loadData = function (pageIndex = 1, pageSize = 5) {
+                let tenMonAn = $("input[name='tenMonAn']").val();
+                let danhMucId = $("select[name='danhMucId']").val();
+                let trangThai = $("select[name='trangThai']").val();
+
+                $.get("/Admin/MonAn/GetPagedData", {
+                    pageIndex: pageIndex,
+                    pageSize: pageSize,
+                    tenMonAn: tenMonAn,
+                    danhMucId: danhMucId,
+                    trangThai: trangThai
+                }, function (response) {
+                    updateTable(response.items);
+                    updatePagination(response.totalCount, response.pageIndex, response.pageSize, tenMonAn, danhMucId, trangThai);
+                    currentPageIndex = pageIndex;
+                    currentPageSize = pageSize;
+                }).fail(function () {
+                    alert("Không thể tải dữ liệu. Vui lòng thử lại.");
+                });
+            }
+
+            // Hàm tìm kiếm
+            window.searchData = function () {
+                loadData(1, currentPageSize); // Reset về trang 1 khi tìm kiếm
+                hideSearchForm();
+            }
+
+            // Hàm cập nhật bảng dữ liệu
+            function updateTable(items) {
+                let html = '';
+                items.forEach(function (item) {
+                    html += `<tr>
+                                        <td>${item.id}</td>
+                                        <td>${item.tenMonAn}</td>
+                                        <td>${item.moTa || ''}</td>
+                                        <td>${Number(item.gia).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</td>
+                                        <td><img src="/uploads/${item.hinhAnh || ''}" alt="${item.tenMonAn}" style="width: 80px; height: 80px; object-fit: cover;" onerror="this.src='/path/to/default-image.jpg';" /></td>
+                                        <td>${item.tenDanhMuc || 'Không có danh mục'}</td>
+                                        <td>${item.trangThaiDisplay}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning editBtn" data-id="${item.id}">Sửa</button>
+                                            <button class="btn btn-sm btn-danger deleteBtn" data-id="${item.id}">Xóa</button>
+                                        </td>
+                                    </tr>`;
+                });
+                $("#monAnList tbody").html(html);
+            }
+
+            // Hàm cập nhật phân trang
+            function updatePagination(totalCount, pageIndex, pageSize, tenMonAn, danhMucId, trangThai) {
+                let totalPages = Math.ceil(totalCount / pageSize);
+                let paginationHtml = '<nav><ul class="pagination">';
+
+                if (pageIndex > 1) {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${pageIndex - 1}, ${pageSize}); return false;">Trước</a></li>`;
+                } else {
+                    paginationHtml += '<li class="page-item disabled"><span class="page-link">Trước</span></li>';
+                }
+
+                for (let i = 1; i <= totalPages; i++) {
+                    if (i === pageIndex) {
+                        paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                    } else {
+                        paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${i}, ${pageSize}); return false;">${i}</a></li>`;
+                    }
+                }
+
+                if (pageIndex < totalPages) {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${pageIndex + 1}, ${pageSize}); return false;">Sau</a></li>`;
+                } else {
+                    paginationHtml += '<li class="page-item disabled"><span class="page-link">Sau</span></li>';
+                }
+
+                paginationHtml += '</ul></nav>';
+                $("#paginationContainer").html(paginationHtml);
+            }
+
+            // Hiển thị/Ẩn form tìm kiếm
+            window.showSearchForm = function () {
+                document.getElementById('searchFormContainer').style.display = 'block';
+            }
+
+            window.hideSearchForm = function () {
+                document.getElementById('searchFormContainer').style.display = 'none';
+            }
+
+            // Xử lý mở form Create
+            $("#btnCreate").click(function (e) {
+                e.preventDefault();
+                $.ajax({
+                    url: "/Admin/MonAn/Create",
+                    type: "GET",
+                    success: function (data) {
+                        $("#createModalContent").html(data);
+                        $.validator.unobtrusive.parse("#createForm");
+                        $("#createModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Không thể tải form thêm món ăn.");
+                    }
+                });
+            });
+
+            // Xử lý submit form Create
+            $(document).on("submit", "#createForm", function (e) {
+                e.preventDefault();
+                let $form = $(this);
+                if (!$form.valid()) return;
+
+                let formData = new FormData($form[0]);
+
+                $.ajax({
+                    url: "/Admin/MonAn/Create",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        if (response.success) {
+                            $("#createModal").modal("hide");
+                            loadData(1, currentPageSize);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi gửi yêu cầu.");
+                    }
+                });
+            });
+
+            // Xử lý Edit
+            // Xử lý Edit
+            $(document).on("click", ".editBtn", function (e) {
+                e.preventDefault();
+                let id = $(this).data("id");
+                $.ajax({
+                    url: "/Admin/MonAn/Edit/" + id,
+                    type: "GET",
+                    success: function (data) {
+                        $("#editModalContent").html(data);
+                        $.validator.unobtrusive.parse("#editForm");
+                        $("#editModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Không thể tải form chỉnh sửa món ăn.");
+                    }
+                });
+            });
+
+            $(document).on("submit", "#editForm", function (e) {
+                e.preventDefault();
+                let $form = $(this);
+                if (!$form.valid()) return;
+
+                let formData = new FormData($form[0]); // Dùng FormData để hỗ trợ file upload
+
+                $.ajax({
+                    url: "/Admin/MonAn/Edit",
+                    type: "POST",
+                    data: formData,
+                    contentType: false, // Cần thiết khi dùng FormData
+                    processData: false, // Cần thiết khi dùng FormData
+                    success: function (response) {
+                        if (response.success) {
+                            $("#editModal").modal("hide");
+                            loadData(1, currentPageSize);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi gửi yêu cầu.");
+                    }
+                });
+            });
+
+            // Xử lý Delete
+            $(document).on("click", ".deleteBtn", function () {
+                if (!confirm("Bạn có chắc muốn xóa món ăn này?")) return;
+                const id = $(this).data("id");
+
+                $.ajax({
+                    type: "POST",
+                    url: "/Admin/MonAn/Delete",
+                    data: { id: id },
+                    success: function (res) {
+                        if (res.success) {
+                            loadData(1, currentPageSize);
+                        } else {
+                            alert(res.message);
+                        }
+                    }
+                });
+            });
+            // Xử lý preview hình ảnh cho cả form tạo và chỉnh sửa
+            $(document).on('change', '#imageFileCreate', function (event) {
+                const file = event.target.files[0];
+                const imagePreview = document.getElementById('imagePreviewCreate');
+
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    imagePreview.src = '';
+                    imagePreview.style.display = 'none';
+                }
+            });
+
+            $(document).on('change', '#imageFileEdit', function (event) {
+                const file = event.target.files[0];
+                const imagePreview = document.getElementById('imagePreviewEdit');
+                const defaultImage = '@(ViewBag.DefaultImage ?? "")'; // Giá trị mặc định nếu không có hình ảnh
+
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    imagePreview.src = defaultImage;
+                    imagePreview.style.display = defaultImage ? 'block' : 'none';
+                }
+            });
+            // Load dữ liệu ban đầu
+            loadData(1, currentPageSize);
+        });
+    </script>
+}

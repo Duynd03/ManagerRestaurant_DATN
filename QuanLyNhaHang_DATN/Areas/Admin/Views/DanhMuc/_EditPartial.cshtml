@@ -1,0 +1,30 @@
+﻿@model QuanLyNhaHang_DATN.Models.DanhMuc
+
+<form id="editForm" method="post" data-ajax="true">
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.Id)
+
+    <div class="modal-header">
+        <h5 class="modal-title">Sửa danh mục</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+
+    <div class="modal-body">
+        <div class="form-group mb-3">
+            <label class="form-label">Tên danh mục <span class="text-danger">*</span></label>
+            @Html.TextBoxFor(m => m.TenDanhMuc, new { @class = "form-control", placeholder = "Nhập tên danh mục" })
+            @Html.ValidationMessageFor(m => m.TenDanhMuc, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Mô tả</label>
+            @Html.TextAreaFor(m => m.MoTa, new { @class = "form-control", rows = 3, placeholder = "Nhập mô tả" })
+           @*  @Html.ValidationMessageFor(m => m.MoTa, "", new { @class = "text-danger" }) *@
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-success">Cập nhật</button>
+    </div>
+</form>

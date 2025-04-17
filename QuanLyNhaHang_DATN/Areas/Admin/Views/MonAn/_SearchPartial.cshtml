@@ -1,0 +1,55 @@
+﻿@model QuanLyNhaHang_DATN.Models.DanhMuc
+@{
+    var danhMucs = ViewBag.DanhMucList as List<QuanLyNhaHang_DATN.Models.DanhMuc>;
+    int? selectedDanhMucId = ViewBag.SelectedDanhMucId;
+    int? selectedTrangThai = ViewBag.SelectedTrangThai;
+    string searchTenMonAn = ViewBag.SearchTenMonAn as string;
+}
+
+<div id="searchFormContainer" class="card p-3 mb-3">
+    <form id="searchForm">
+        <div class="mb-3">
+            <label for="searchInput" class="form-label">Tên món ăn</label>
+            <input type="text" name="TenMonAn" class="form-control" value="@searchTenMonAn" placeholder="Nhập tên món ăn..." />
+        </div>
+
+        <div class="mb-3">
+            <label for="DanhMucId" class="form-label">Danh mục</label>
+            <select name="DanhMucId" class="form-select">
+                <option value="">-- Tất cả --</option>
+                @foreach (var dm in danhMucs)
+                {
+                    <option value="@dm.Id" @(selectedDanhMucId == dm.Id ? "selected" : "")>@dm.TenDanhMuc</option>
+                }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="TrangThai" class="form-label">Trạng thái</label>
+            <select name="TrangThai" class="form-select">
+                <option value="">-- Tất cả --</option>
+                <option value="1" @(selectedTrangThai == 1 ? "selected" : "")>Hiển thị</option>
+                <option value="0" @(selectedTrangThai == 0 ? "selected" : "")>Ẩn</option>
+            </select>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary" onclick="searchData()">
+                <i class="bi bi-search"></i> Tìm kiếm
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="hideSearchForm()">
+                <i class="bi bi-x-circle"></i> Đóng
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function showSearchForm() {
+        document.getElementById('searchFormContainer').style.display = 'block';
+    }
+
+    function hideSearchForm() {
+        document.getElementById('searchFormContainer').style.display = 'none';
+    }
+</script> 

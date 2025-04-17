@@ -1,0 +1,25 @@
+﻿@model QuanLyNhaHang_DATN.Models.KhuVucBan
+
+<form id="createForm" method="post" data-ajax="true">
+    @Html.AntiForgeryToken()
+    <div class="modal-header">
+        <h5 class="modal-title">Thêm khu vực bàn mới</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        <div class="form-group mb-3">
+            <label class="form-label">Tên khu vực <span class="text-danger">*</span></label>
+            @Html.TextBoxFor(m => m.TenKhuVuc, new { @class = "form-control", placeholder = "Nhập tên khu vực" })
+            @Html.ValidationMessageFor(m => m.TenKhuVuc, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Mô tả</label>
+            @Html.TextAreaFor(m => m.MoTa, new { @class = "form-control", rows = "3", placeholder = "Nhập mô tả (nếu có)" })
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        <button type="submit" class="btn btn-primary">Lưu</button>
+    </div>
+</form>

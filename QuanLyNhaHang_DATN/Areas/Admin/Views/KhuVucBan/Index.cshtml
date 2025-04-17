@@ -1,0 +1,177 @@
+﻿@model IEnumerable<QuanLyNhaHang_DATN.Models.KhuVucBan>
+
+@{
+    ViewData["Title"] = "Quản lý khu vực bàn";
+    Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
+}
+
+<div class="col-md-12">
+    <div class="card">
+        <div class="card-header d-flex align-items-center">
+            <h4 class="card-title me-auto">Danh sách khu vực bàn</h4>
+            <button id="btnCreate" class="btn btn-primary btn-round">
+                <i class="fa fa-plus"></i> Thêm khu vực
+            </button>
+        </div>
+
+        <div class="card-body">
+            <!-- Modal Create -->
+            <div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content" id="createModalContent"></div>
+                </div>
+            </div>
+
+            <!-- Modal Edit -->
+            <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content" id="editModalContent"></div>
+                </div>
+            </div>
+
+            <!-- Bảng danh sách -->
+            <div class="table-responsive">
+                <table id="danhMucTable" class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên khu vực bàn</th>
+                            <th>Mô tả</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>@item.TenKhuVuc</td>
+                                <td>@item.MoTa</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning editBtn" data-id="@item.Id">Sửa</button>
+                                    <button class="btn btn-sm btn-danger deleteBtn" data-id="@item.Id">Xóa</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Hàm để tải dữ liệu và cập nhật bảng
+            function loadData() {
+                $.get("/Admin/KhuVucBan/Index", function (data) {
+                    // Lấy phần tbody từ dữ liệu trả về
+                    var newTableBody = $(data).find("#danhMucTable tbody").html();
+                    $("#danhMucTable tbody").html(newTableBody);
+                }).fail(function () {
+                    alert("Không thể tải dữ liệu. Vui lòng thử lại.");
+                });
+            }
+
+            // Mở form Create
+            $("#btnCreate").click(function () {
+                $.get("/Admin/KhuVucBan/Create", function (data) {
+                    $("#createModalContent").html(data);
+                    $.validator.unobtrusive.parse("#createForm");
+                    $("#createModal").modal("show");
+                });
+            });
+
+            // Submit form Create
+            $(document).on("submit", "#createForm", function (e) {
+                e.preventDefault();
+                var $form = $(this);
+                if (!$form.valid()) return;
+
+                var formData = new FormData(this);
+                $.ajax({
+                    url: "/Admin/KhuVucBan/Create",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (res) {
+                        if (res.success) {
+                            $("#createModal").modal("hide"); // Đóng modal
+                            loadData(); // Cập nhật bảng mà không reload
+                            alert(res.message); // Hiển thị thông báo thành công
+                        } else {
+                            alert(res.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra.");
+                    }
+                });
+            });
+
+            // Mở form Edit
+            $(document).on("click", ".editBtn", function () {
+                var id = $(this).data("id");
+                $.get("/Admin/KhuVucBan/Edit/" + id, function (data) {
+                    $("#editModalContent").html(data);
+                    $.validator.unobtrusive.parse("#editForm");
+                    $("#editModal").modal("show");
+                });
+            });
+
+            // Submit form Edit
+            $(document).on("submit", "#editForm", function (e) {
+                e.preventDefault();
+                var $form = $(this);
+                if (!$form.valid()) return;
+
+                var formData = new FormData(this);
+                $.ajax({
+                    url: "/Admin/KhuVucBan/Edit",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (res) {
+                        if (res.success) {
+                            $("#editModal").modal("hide"); // Đóng modal
+                            loadData(); // Cập nhật bảng mà không reload
+                            alert(res.message); // Hiển thị thông báo thành công
+                        } else {
+                            alert(res.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra.");
+                    }
+                });
+            });
+
+            // Xử lý Xóa
+            $(document).on("click", ".deleteBtn", function () {
+                if (!confirm("Bạn có chắc muốn xóa khu vực này?")) return;
+                var id = $(this).data("id");
+                $.ajax({
+                    url: "/Admin/KhuVucBan/Delete",
+                    type: "POST",
+                    data: { id: id },
+                    success: function (response) {
+                        if (response.success) {
+                            loadData(); // Cập nhật bảng mà không reload
+                            alert("Xóa khu vực bàn thành công!"); // Hiển thị thông báo thành công
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi xóa.");
+                    }
+                });
+            });
+        });
+    </script>
+}
