@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Kaiadmin - Bootstrap 5 Admin Dashboard</title>
+    <title>Quản lý nhà hàng Bắc Việt</title>
     <meta content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
           name="viewport" />
     <link rel="icon"
@@ -10,10 +10,10 @@
           type="image/x-icon" />
 
     <!-- Fonts and icons -->
-    @*  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> *@
-
+   @*  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> *@
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="~/js/admin/plugin/webfont/webfont.min.js"></script>
-    <script>
+  @*   <script>
         WebFont.load({
             google: { families: ["Public Sans:300,400,500,600,700"] },
             custom: {
@@ -31,7 +31,7 @@
                 sessionStorage.fonts = true;
             },
         });
-    </script>
+    </script> *@
 
     <!-- CSS Files -->
     <link rel="stylesheet" href="~/css/admin/bootstrap.min.css" />
@@ -48,12 +48,18 @@
             <div class="sidebar-logo">
                 <!-- Logo Header -->
                 <div class="logo-header" data-background-color="dark">
-                    <a href="index.html" class="logo">
+                   @*  <a href="index.html" class="logo">
                         <img src="~/img/admin/kaiadmin/logo_light.svg"
                              alt="navbar brand"
                              class="navbar-brand"
                              height="20" />
+                    </a> *@
+                    <a href="index.html" class="logo">
+                        <span class="navbar-brand" style="font-size: 20px; font-weight: bold; color: white;">
+                            Quản lý nhà hàng
+                        </span>
                     </a>
+
                     <div class="nav-toggle">
                         <button class="btn btn-toggle toggle-sidebar">
                             <i class="gg-menu-right"></i>
@@ -80,7 +86,7 @@
 
                         <li class="nav-item">
                             <a data-bs-toggle="collapse" href="#charts">
-                                <i class="far fa-chart-bar"></i>
+                                <i class="fas fa-calendar-check"></i>
                                 <p>Quản lý đặt bàn</p>
                                 <span class="caret"></span>
                             </a>
@@ -107,20 +113,20 @@
 
                         <li class="nav-item">
                             <a data-bs-toggle="collapse" href="#charts1">
-                                <i class="far fa-chart-bar"></i>
-                                <p>Quản lý Menu</p>
+                                <i class="fas fa-chair"></i>
+                                <p>Quản lý bàn ăn</p>
                                 <span class="caret"></span>
                             </a>
                             <div class="collapse" id="charts1">
                                 <ul class="nav nav-collapse">
                                     <li>
-                                        <a href="#">
-                                            <span class="sub-item">Quản lý danh mục</span>
+                                        <a href="/Admin/KhuVucBan/Index">
+                                            <span class="sub-item">Quản lý Khu vực bàn</span>
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="~/Areas/Admin/MonAn">
-                                            <span class="sub-item">Quản lý món ăn</span>
+                                        <a href="/Admin/Ban/Index">
+                                            <span class="sub-item">Quản lý Bàn ăn</span>
                                         </a>
                                     </li>
 
@@ -130,7 +136,30 @@
 
                         <li class="nav-item">
                             <a data-bs-toggle="collapse" href="#charts2">
-                                <i class="far fa-chart-bar"></i>
+                                <i class="fas fa-book"></i>
+                                <p>Quản lý Menu</p>
+                                <span class="caret"></span>
+                            </a>
+                            <div class="collapse" id="charts2">
+                                <ul class="nav nav-collapse">
+                                    <li>
+                                        <a href="/Admin/DanhMuc/Index">
+                                            <span class="sub-item">Quản lý danh mục</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="/Admin/MonAn/Index">
+                                            <span class="sub-item">Quản lý món ăn</span>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a data-bs-toggle="collapse" href="#charts3">
+                                <i class="fas fa-file-invoice"></i>
                                 <p>Quản lý Hóa đơn</p>
                                 <span class="caret"></span>
                             </a>
@@ -153,7 +182,7 @@
 
                         <li class="nav-item">
                             <a href="#">
-                                <i class="fas fa-file"></i>
+                                <i class="fas fa-users"></i>
                                 <p>Quản lý nhân viên</p>
                                     @* <span class="badge badge-secondary">1</span> *@
                             </a>
@@ -593,15 +622,13 @@
 
 
         <footer class="footer">
-            <div class="container-fluid d-flex justify-content-between">
-
-                <div class="copyright">
-                    2024, made with <i class="fa fa-heart heart text-danger"></i> by
-                    <a href="http://www.themekita.com">ThemeKita</a>
+            <div class="container-fluid d-flex justify-content-center">
+                <div class="copyright text-center">
+                    © 2025 - Hệ thống Quản lý Nhà hàng Bắc Việt <i class="fa fa-heart heart text-danger"></i>
                 </div>
-
             </div>
         </footer>
+
     </div>
 
 

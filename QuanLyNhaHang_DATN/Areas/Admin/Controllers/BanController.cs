@@ -20,7 +20,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         public BanController(IBanService banService, IKhuVucBanService khuVucBanService)
         {
             _banService = banService;
-            khuVucBanService = _khuVucBanService;
+            _khuVucBanService = khuVucBanService;
 
         }
         public async Task<IActionResult> Index(int pageIndex = 1, int pageSize = 5, string? tenBan = null, int? khuVucBanId = null, int? trangThai = null)
@@ -69,9 +69,10 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
             var items = result.Items.Select(item => new
             {
                 Id = item.Id,
-                item.TenBan,
+                TenBan = item.TenBan,
                 TenKhuVucBan = item.KhuVucBan?.TenKhuVuc,
-                TrangThaiDisplay = GetEnumDisplayName(item.TrangThai)
+                TrangThaiDisplay = GetEnumDisplayName(item.TrangThai),
+                TrangThaiValue = (int)item.TrangThai // Thêm giá trị số của TrangThai
             });
 
             return Json(new
@@ -155,7 +156,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
                 existing.TenBan = ban.TenBan;
                 existing.KhuVucBanId = ban.KhuVucBanId;
-
+                existing.TrangThai = ban.TrangThai;
                 await _banService.UpdateAsync(existing);
                 return Json(new { success = true, message = "Cập nhật Bàn thành công" });
             }

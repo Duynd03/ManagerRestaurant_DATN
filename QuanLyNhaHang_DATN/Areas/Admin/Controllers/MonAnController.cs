@@ -66,7 +66,8 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 item.Gia,
                 item.HinhAnh,
                 TenDanhMuc = item.DanhMuc?.TenDanhMuc, 
-                TrangThaiDisplay = GetEnumDisplayName(item.TrangThai)
+                TrangThaiDisplay = GetEnumDisplayName(item.TrangThai),
+                 TrangThaiValue = (int)item.TrangThai // Thêm giá trị số của TrangThai
             });
 
             return Json(new
@@ -162,7 +163,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 existing.MoTa = monAn.MoTa;
                 existing.Gia = monAn.Gia;
                 existing.DanhMucId = monAn.DanhMucId;
-
+                existing.TrangThai = monAn.TrangThai;
                 if (imageFile != null)
                 {
                     existing.HinhAnh = await SaveImageAsync(imageFile);

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 namespace QuanLyNhaHang_DATN.Models
@@ -18,7 +19,8 @@ namespace QuanLyNhaHang_DATN.Models
 
         [ForeignKey("QuyenId")]
         public Quyen Quyen { get; set; }
-        public ICollection<HoaDon> HoaDons { get; set; }
+        [ValidateNever]
+        public virtual ICollection<HoaDon> HoaDons { get; set; }
     }
     public enum TrangThaiTaiKhoan
     {

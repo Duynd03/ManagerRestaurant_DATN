@@ -1,25 +1,25 @@
-﻿@model IEnumerable<QuanLyNhaHang_DATN.Models.MonAn>
+﻿@model IEnumerable<QuanLyNhaHang_DATN.Models.Ban>
 @{
-    ViewData["Title"] = "Quản lý món ăn";
+    ViewData["Title"] = "Quản lý Bàn";
     Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
-    var danhMucs = ViewBag.DanhMucList as List<QuanLyNhaHang_DATN.Models.DanhMuc>;
-    int? selectedDanhMucId = ViewBag.SelectedDanhMucId;
+    var khuVucBans = ViewBag.KhuVucBanList as List<QuanLyNhaHang_DATN.Models.KhuVucBan>;
+    int? selectedKhuVucBanId = ViewBag.SelectedKhuVucBanId;
     int? selectedTrangThai = ViewBag.SelectedTrangThai;
-    string searchTenMonAn = ViewBag.SearchTenMonAn as string;
+    string searchTenBan = ViewBag.SearchTenBan as string;
 }
 
 <div class="col-md-12">
     <div class="card">
         <div class="card-header">
             <div class="d-flex align-items-center">
-                <h4 class="card-title me-auto">Danh sách món ăn</h4>
+                <h4 class="card-title me-auto">Danh sách Bàn</h4>
 
                 <button id="btnSearch" class="btn btn-secondary btn-round me-2" onclick="showSearchForm()">
                     <i class="fa fa-search"></i> Tìm kiếm
                 </button>
 
                 <button id="btnCreate" class="btn btn-primary btn-round" data-bs-toggle="modal" data-bs-target="#createModal">
-                    <i class="fa fa-plus"></i> Thêm món ăn
+                    <i class="fa fa-plus"></i> Thêm Bàn
                 </button>
             </div>
         </div>
@@ -28,17 +28,17 @@
         <div id="searchFormContainer" class="card p-3 mb-3" style="display: none;">
             <form id="searchForm">
                 <div class="mb-3">
-                    <label for="searchInput" class="form-label">Tên món ăn</label>
-                    <input type="text" name="tenMonAn" class="form-control" value="@searchTenMonAn" placeholder="Nhập tên món ăn..." />
+                    <label for="searchInput" class="form-label">Tên Bàn</label>
+                    <input type="text" name="tenBan" class="form-control" value="@searchTenBan" placeholder="Nhập tên Bàn" />
                 </div>
 
                 <div class="mb-3">
-                    <label for="danhMucId" class="form-label">Danh mục</label>
-                    <select name="danhMucId" class="form-select">
+                    <label for="khuVucBanId" class="form-label">Khu vực</label>
+                    <select name="khuVucBanId" class="form-select">
                         <option value="">-- Tất cả --</option>
-                        @foreach (var dm in danhMucs)
+                        @foreach (var dm in khuVucBans)
                         {
-                            <option value="@dm.Id" @(selectedDanhMucId == dm.Id ? "selected" : "")>@dm.TenDanhMuc</option>
+                            <option value="@dm.Id" @(selectedKhuVucBanId == dm.Id ? "selected" : "")>@dm.TenKhuVuc</option>
                         }
                     </select>
                 </div>
@@ -47,8 +47,9 @@
                     <label for="trangThai" class="form-label">Trạng thái</label>
                     <select name="trangThai" class="form-select">
                         <option value="">-- Tất cả --</option>
-                        <option value="1" @(selectedTrangThai == 1 ? "selected" : "")>Có sẵn</option>
-                        <option value="0" @(selectedTrangThai == 0 ? "selected" : "")>Hết hàng</option>
+                        <option value="0" @(selectedTrangThai == 0 ? "selected" : "")>Trống</option>
+                        <option value="1" @(selectedTrangThai == 1 ? "selected" : "")>Đã đặt trước</option>
+                        <option value="2" @(selectedTrangThai == 2 ? "selected" : "")>Đang sử dụng</option>
                     </select>
                 </div>
 
@@ -74,8 +75,8 @@
 
             <!-- Danh sách món ăn -->
             <div class="table-responsive">
-                <div id="monAnList">
-                    @await Html.PartialAsync("_MonAnList", Model)
+                <div id="banList">
+                    @await Html.PartialAsync("_BanList", Model)
                 </div>
 
                 <div id="paginationContainer" class="mt-3">
@@ -103,19 +104,19 @@
 
             // Gán hàm vào window để gọi từ HTML onclick
             window.loadData = function (pageIndex = 1, pageSize = 5) {
-                let tenMonAn = $("input[name='tenMonAn']").val();
-                let danhMucId = $("select[name='danhMucId']").val();
+                let tenBan = $("input[name='tenBan']").val();
+                let khuVucBanId = $("select[name='khuVucBanId']").val();
                 let trangThai = $("select[name='trangThai']").val();
 
-                $.get("/Admin/MonAn/GetPagedData", {
+                $.get("/Admin/Ban/GetPagedData", {
                     pageIndex: pageIndex,
                     pageSize: pageSize,
-                    tenMonAn: tenMonAn,
-                    danhMucId: danhMucId,
+                    tenBan: tenBan,
+                    khuVucBanId: khuVucBanId,
                     trangThai: trangThai
                 }, function (response) {
                     updateTable(response.items);
-                    updatePagination(response.totalCount, response.pageIndex, response.pageSize, tenMonAn, danhMucId, trangThai);
+                    updatePagination(response.totalCount, response.pageIndex, response.pageSize, tenBan, khuVucBanId, trangThai);
                     currentPageIndex = pageIndex;
                     currentPageSize = pageSize;
                 }).fail(function () {
@@ -133,31 +134,32 @@
             function updateTable(items) {
                 let html = '';
                 items.forEach(function (item) {
+                    // Xác định màu sắc dựa trên trạng thái
                     let trangThaiColor = '';
-                        if (item.trangThaiValue === 0) { // Hết hàng
-                            trangThaiColor = 'red';
-                        } else if (item.trangThaiValue === 1) { // Có sẵn
-                             trangThaiColor = 'green';
-                        }
+                    if (item.trangThaiValue === 0) { // Trống
+                        trangThaiColor = 'red';
+                    } else if (item.trangThaiValue === 1) { // Đã đặt trước
+                        trangThaiColor = 'orange';
+                    } else if (item.trangThaiValue === 2) { // Đang sử dụng
+                        trangThaiColor = 'green';
+                    }
                     html += `<tr>
-                                        <td>${item.id}</td>
-                                        <td>${item.tenMonAn}</td>
-                                        <td>${item.moTa || ''}</td>
-                                        <td>${Number(item.gia).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</td>
-                                        <td><img src="/uploads/${item.hinhAnh || ''}" alt="${item.tenMonAn}" style="width: 80px; height: 80px; object-fit: cover;" onerror="this.src='/path/to/default-image.jpg';" /></td>
-                                        <td>${item.tenDanhMuc || 'Không có danh mục'}</td>
-                                        <td style="color: ${trangThaiColor}">${item.trangThaiDisplay || 'Không xác định'}</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-warning editBtn" data-id="${item.id}">Sửa</button>
-                                            <button class="btn btn-sm btn-danger deleteBtn" data-id="${item.id}">Xóa</button>
-                                        </td>
-                                    </tr>`;
+                                                <td>${item.id}</td>
+                                                <td>${item.tenBan}</td>
+                                                <td>${item.tenKhuVucBan || 'Không có Khu vực'}</td>
+                                                <td style="color: ${trangThaiColor}">${item.trangThaiDisplay || 'Không xác định'}</td>
+                                                <td>
+                                                   
+                                                    <button class="btn btn-sm btn-warning editBtn" data-id="${item.id}">Cập nhật</button>
+                                                    <button class="btn btn-sm btn-danger deleteBtn" data-id="${item.id}">Xóa</button>
+                                                </td>
+                                            </tr>`;
                 });
-                $("#monAnList tbody").html(html);
+                $("#banList tbody").html(html);
             }
-
+            // <td>${item.trangThaiDisplay}</td>
             // Hàm cập nhật phân trang
-            function updatePagination(totalCount, pageIndex, pageSize, tenMonAn, danhMucId, trangThai) {
+            function updatePagination(totalCount, pageIndex, pageSize, tenBan, khuVucBanId, trangThai) {
                 let totalPages = Math.ceil(totalCount / pageSize);
                 let paginationHtml = '<nav><ul class="pagination">';
 
@@ -198,7 +200,7 @@
             $("#btnCreate").click(function (e) {
                 e.preventDefault();
                 $.ajax({
-                    url: "/Admin/MonAn/Create",
+                    url: "/Admin/Ban/Create",
                     type: "GET",
                     success: function (data) {
                         $("#createModalContent").html(data);
@@ -206,7 +208,7 @@
                         $("#createModal").modal("show");
                     },
                     error: function () {
-                        alert("Không thể tải form thêm món ăn.");
+                        alert("Không thể tải form thêm Bàn.");
                     }
                 });
             });
@@ -220,7 +222,7 @@
                 let formData = new FormData($form[0]);
 
                 $.ajax({
-                    url: "/Admin/MonAn/Create",
+                    url: "/Admin/Ban/Create",
                     type: "POST",
                     data: formData,
                     contentType: false,
@@ -241,12 +243,11 @@
             });
 
             // Xử lý Edit
-            // Xử lý Edit
             $(document).on("click", ".editBtn", function (e) {
                 e.preventDefault();
                 let id = $(this).data("id");
                 $.ajax({
-                    url: "/Admin/MonAn/Edit/" + id,
+                    url: "/Admin/Ban/Edit/" + id,
                     type: "GET",
                     success: function (data) {
                         $("#editModalContent").html(data);
@@ -254,7 +255,7 @@
                         $("#editModal").modal("show");
                     },
                     error: function () {
-                        alert("Không thể tải form chỉnh sửa món ăn.");
+                        alert("Không thể tải form chỉnh sửa Bàn.");
                     }
                 });
             });
@@ -263,15 +264,13 @@
                 e.preventDefault();
                 let $form = $(this);
                 if (!$form.valid()) return;
-
-                let formData = new FormData($form[0]); // Dùng FormData để hỗ trợ file upload
-
+                let formData = new FormData($form[0]);
                 $.ajax({
-                    url: "/Admin/MonAn/Edit",
+                    url: "/Admin/Ban/Edit",
                     type: "POST",
                     data: formData,
-                    contentType: false, // Cần thiết khi dùng FormData
-                    processData: false, // Cần thiết khi dùng FormData
+                    contentType: false, 
+                    processData: false, 
                     success: function (response) {
                         if (response.success) {
                             $("#editModal").modal("hide");
@@ -289,12 +288,12 @@
 
             // Xử lý Delete
             $(document).on("click", ".deleteBtn", function () {
-                if (!confirm("Bạn có chắc muốn xóa món ăn này?")) return;
+                if (!confirm("Bạn có chắc muốn xóa Bàn này?")) return;
                 const id = $(this).data("id");
 
                 $.ajax({
                     type: "POST",
-                    url: "/Admin/MonAn/Delete",
+                    url: "/Admin/Ban/Delete",
                     data: { id: id },
                     success: function (res) {
                         if (res.success) {
@@ -304,41 +303,6 @@
                         }
                     }
                 });
-            });
-            // Xử lý preview hình ảnh cho cả form tạo và chỉnh sửa
-            $(document).on('change', '#imageFileCreate', function (event) {
-                const file = event.target.files[0];
-                const imagePreview = document.getElementById('imagePreviewCreate');
-
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        imagePreview.src = e.target.result;
-                        imagePreview.style.display = 'block';
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    imagePreview.src = '';
-                    imagePreview.style.display = 'none';
-                }
-            });
-
-            $(document).on('change', '#imageFileEdit', function (event) {
-                const file = event.target.files[0];
-                const imagePreview = document.getElementById('imagePreviewEdit');
-                const defaultImage = '@(ViewBag.DefaultImage ?? "")'; // Giá trị mặc định nếu không có hình ảnh
-
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        imagePreview.src = e.target.result;
-                        imagePreview.style.display = 'block';
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    imagePreview.src = defaultImage;
-                    imagePreview.style.display = defaultImage ? 'block' : 'none';
-                }
             });
             // Load dữ liệu ban đầu
             loadData(1, currentPageSize);

@@ -1,0 +1,34 @@
+﻿@model QuanLyNhaHang_DATN.Models.Ban
+@using QuanLyNhaHang_DATN.Models
+<form id="editForm" method="post" enctype="multipart/form-data" data-ajax="true">
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.Id)
+
+    <div class="modal-header">
+        <h5 class="modal-title">Chỉnh sửa Bàn</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        <div class="form-group mb-3">
+            <label class="form-label">Tên Bàn <span class="text-danger">*</span></label>
+            @Html.TextBoxFor(m => m.TenBan, new { @class = "form-control", required = "required" })
+            @Html.ValidationMessageFor(m => m.TenBan, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Khu vực <span class="text-danger">*</span></label>
+            @Html.DropDownListFor(m => m.KhuVucBanId, new SelectList(ViewBag.KhuVucBans, "Id", "TenKhuVuc", Model.KhuVucBanId), "-- Chọn khu vực --", new { @class = "form-control", required = "required" })
+            @Html.ValidationMessageFor(m => m.KhuVucBanId, "", new { @class = "text-danger" })
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Trạng thái <span class="text-danger">*</span></label>
+            @Html.DropDownListFor(m => m.TrangThai, (List<SelectListItem>)ViewBag.TrangThaiList, "-- Chọn trạng thái --", new { @class = "form-control" })
+            @Html.ValidationMessageFor(m => m.TrangThai, "", new { @class = "text-danger" })
+        </div>
+       
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        <button type="submit" class="btn btn-primary">Cập nhật</button>
+    </div>
+</form>

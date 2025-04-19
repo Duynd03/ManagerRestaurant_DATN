@@ -9,6 +9,7 @@ namespace QuanLyNhaHang_DATN.Models
 
         [Required]
         public string TenQuyen { get; set; }
+        public string? MoTa { get; set; }
 
         public ICollection<Quyen_ChucNang> Quyen_ChucNangs { get; set; }
 
