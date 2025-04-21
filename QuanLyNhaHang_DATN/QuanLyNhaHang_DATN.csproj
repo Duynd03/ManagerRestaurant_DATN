@@ -8,11 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Repositories\AccountRepository\" />
     <Folder Include="Repositories\PaymentRepository\" />
     <Folder Include="Repositories\OrderRepository\" />
     <Folder Include="Repositories\ReservationRepository\" />
-    <Folder Include="Services\AccountService\" />
     <Folder Include="Services\Extensions\" />
     <Folder Include="Services\PaymentService\" />
     <Folder Include="Services\OrderService\" />

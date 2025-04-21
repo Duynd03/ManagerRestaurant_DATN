@@ -1,12 +1,31 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using QuanLyNhaHang_DATN.Data;
 using QuanLyNhaHang_DATN.Extensions;
-
+using Microsoft.AspNetCore.Identity;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Thêm Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+
+// Cấu hình cookie xác thực
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login"; // Đường dẫn khi chưa đăng nhập
+    options.LogoutPath = "/Account/Logout"; // Đường dẫn đăng xuất
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Thời gian hết hạn của cookie
+});
+// Thêm dịch vụ Session
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30); // Session timeout sau 30 phút
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 //
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("NhaHangConnection")));
@@ -27,6 +46,9 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+// THÊM middleware Session ở đây
+app.UseSession();
+app.UseAuthentication(); // Thêm middleware xác thực của Identity
 app.UseAuthorization();
 
 app.MapControllerRoute(

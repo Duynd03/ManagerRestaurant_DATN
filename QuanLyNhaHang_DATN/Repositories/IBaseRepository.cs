@@ -8,6 +8,7 @@
         Task UpdateAsync(T entity);
         Task DeleteAsync(T entity);
         IQueryable<T> Query(); // dùng cho search, phân trang
+        Task SaveChangesAsync();
     }
 
 }

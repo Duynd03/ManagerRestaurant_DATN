@@ -1,11 +1,15 @@
 ﻿using QuanLyNhaHang_DATN.Repositories.BanRepository;
 using QuanLyNhaHang_DATN.Repositories.DanhMucRepository;
+using QuanLyNhaHang_DATN.Repositories.KhachHangRepository;
 using QuanLyNhaHang_DATN.Repositories.KhuVucBanRepository;
 using QuanLyNhaHang_DATN.Repositories.MonAnRepository;
+using QuanLyNhaHang_DATN.Repositories.TaiKhoanRepository;
 using QuanLyNhaHang_DATN.Services.BanService;
 using QuanLyNhaHang_DATN.Services.DanhMucService;
+using QuanLyNhaHang_DATN.Services.KhachHangService;
 using QuanLyNhaHang_DATN.Services.KhuVucBanService;
 using QuanLyNhaHang_DATN.Services.MonAnService;
+using QuanLyNhaHang_DATN.Services.TaiKhoanService;
 
 namespace QuanLyNhaHang_DATN.Extensions
 {
@@ -29,8 +33,18 @@ namespace QuanLyNhaHang_DATN.Extensions
             services.AddScoped<IBanRepository, BanRepository>();
 
             services.AddScoped<IBanService, BanService>();
+
+            //Tai khoan
+            services.AddScoped<ITaiKhoanRepository, TaiKhoanRepository>();
+
+            services.AddScoped<ITaiKhoanService, TaiKhoanService>();
+            //Khach Hang
+            services.AddScoped<IKhachHangRepository, KhachHangRepository>();
+
+            services.AddScoped<IKhachHangService, KhachHangService>();
+
             return services;
-          
+            
         }
     }
 }

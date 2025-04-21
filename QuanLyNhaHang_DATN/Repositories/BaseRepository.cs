@@ -25,6 +25,10 @@ namespace QuanLyNhaHang_DATN.Repositories
         public Task DeleteAsync(T entity) => Task.FromResult(_dbSet.Remove(entity));
 
         public IQueryable<T> Query() => _dbSet.AsQueryable();
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
+        }
     }
 
 
