@@ -9,12 +9,14 @@ namespace QuanLyNhaHang_DATN.Models
         [Key]
         public int Id { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Tên khách hàng là bắt buộc")]
         public string TenKhachHang { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "Số điện thoại phải có đúng 10 chữ số")]
         public string SDT { get; set; }
 
+        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
         public string? Email { get; set; }
 
         public string? DiaChi { get; set; }

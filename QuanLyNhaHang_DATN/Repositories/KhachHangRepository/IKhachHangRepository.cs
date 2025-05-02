@@ -6,5 +6,6 @@ namespace QuanLyNhaHang_DATN.Repositories.KhachHangRepository
     {
         Task<KhachHang> GetByTaiKhoanIdAsync(int taiKhoanId);
         Task<bool> CheckExistEmailAsync(string email);
+        Task<KhachHang> GetByTaiKhoanUsernameAsync(string username);
     }
 }

@@ -19,5 +19,11 @@ namespace QuanLyNhaHang_DATN.Repositories.KhachHangRepository
         {
             return await _dbSet.AnyAsync(kh => kh.Email == email);
         }
+        public async Task<KhachHang> GetByTaiKhoanUsernameAsync(string username)
+        {
+            return await _context.KhachHangs
+                .Include(kh => kh.TaiKhoan)
+                .FirstOrDefaultAsync(kh => kh.TaiKhoan.UserName == username);
+        }
     }
 }

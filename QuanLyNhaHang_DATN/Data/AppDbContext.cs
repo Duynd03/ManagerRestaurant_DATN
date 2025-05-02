@@ -1,13 +1,15 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using QuanLyNhaHang_DATN.Models;
 
 namespace QuanLyNhaHang_DATN.Data
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext : IdentityDbContext<TaiKhoan, Quyen, int>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options)
-            : base(options) { }
+            : base(options)
+        {
+        }
 
         public DbSet<MonAn> MonAns { get; set; }
         public DbSet<DanhMuc> DanhMucs { get; set; }
@@ -22,9 +24,27 @@ namespace QuanLyNhaHang_DATN.Data
         public DbSet<Quyen_ChucNang> Quyen_ChucNangs { get; set; }
         public DbSet<HoaDon> HoaDons { get; set; }
         public DbSet<GoiMon> GoiMons { get; set; }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+
+        protected override void OnModelCreating(ModelBuilder builder)
         {
-            base.OnModelCreating(modelBuilder);
+            base.OnModelCreating(builder);
+
+            // Ánh xạ các bảng Identity
+            builder.Entity<TaiKhoan>().ToTable("TaiKhoan");
+            builder.Entity<Quyen>().ToTable("Quyen");
+
+            // Ánh xạ các bảng khác
+            builder.Entity<MonAn>().ToTable("MonAn");
+            builder.Entity<DanhMuc>().ToTable("DanhMuc");
+            builder.Entity<Ban>().ToTable("Ban");
+            builder.Entity<KhuVucBan>().ToTable("KhuVucBan");
+            builder.Entity<DatBan>().ToTable("DatBan");
+            builder.Entity<KhachHang>().ToTable("KhachHang");
+            builder.Entity<NhanVien>().ToTable("NhanVien");
+            builder.Entity<ChucNang>().ToTable("ChucNang");
+            builder.Entity<Quyen_ChucNang>().ToTable("Quyen_ChucNang");
+            builder.Entity<HoaDon>().ToTable("HoaDon");
+            builder.Entity<GoiMon>().ToTable("GoiMon");
         }
     }
 }

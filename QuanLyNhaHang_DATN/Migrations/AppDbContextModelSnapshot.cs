@@ -22,6 +22,109 @@ namespace QuanLyNhaHang_DATN.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AspNetRoleClaims", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<int>", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AspNetUserClaims", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<int>", b =>
+                {
+                    b.Property<string>("LoginProvider")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ProviderKey")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ProviderDisplayName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("LoginProvider", "ProviderKey");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AspNetUserLogins", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<int>", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AspNetUserRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<int>", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LoginProvider")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("UserId", "LoginProvider", "Name");
+
+                    b.ToTable("AspNetUserTokens", (string)null);
+                });
+
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.Ban", b =>
                 {
                     b.Property<int>("Id")
@@ -45,7 +148,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasIndex("KhuVucBanId");
 
-                    b.ToTable("Bans");
+                    b.ToTable("Ban", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.ChucNang", b =>
@@ -66,7 +169,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ChucNangs");
+                    b.ToTable("ChucNang", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.DanhMuc", b =>
@@ -86,7 +189,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DanhMucs");
+                    b.ToTable("DanhMuc", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.DatBan", b =>
@@ -97,14 +200,13 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("BanId")
+                    b.Property<int?>("BanId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("CocTien")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("GhiChu")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool?>("IsDatHo")
@@ -148,7 +250,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasIndex("NhanVienId");
 
-                    b.ToTable("DatBans");
+                    b.ToTable("DatBan", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.GoiMon", b =>
@@ -185,7 +287,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasIndex("MonAnId");
 
-                    b.ToTable("GoiMons");
+                    b.ToTable("GoiMon", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.HoaDon", b =>
@@ -227,7 +329,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasIndex("TaiKhoanId");
 
-                    b.ToTable("HoaDons");
+                    b.ToTable("HoaDon", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.KhachHang", b =>
@@ -262,7 +364,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasIndex("TaiKhoanId");
 
-                    b.ToTable("KhachHangs");
+                    b.ToTable("KhachHang", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.KhuVucBan", b =>
@@ -285,7 +387,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("KhuVucBans");
+                    b.ToTable("KhuVucBan", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.MonAn", b =>
@@ -319,7 +421,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasIndex("DanhMucId");
 
-                    b.ToTable("MonAns");
+                    b.ToTable("MonAn", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.NhanVien", b =>
@@ -354,7 +456,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasIndex("TaiKhoanId");
 
-                    b.ToTable("NhanViens");
+                    b.ToTable("NhanVien", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.Quyen", b =>
@@ -365,16 +467,29 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("MoTa")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("TenQuyen")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Quyens");
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
+
+                    b.ToTable("Quyen", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.Quyen_ChucNang", b =>
@@ -397,7 +512,7 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.HasIndex("QuyenId");
 
-                    b.ToTable("Quyen_ChucNangs");
+                    b.ToTable("Quyen_ChucNang", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.TaiKhoan", b =>
@@ -408,28 +523,126 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("MatKhau")
-                        .IsRequired()
+                    b.Property<int>("AccessFailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("LockoutEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTime>("NgayTao")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("bit");
+
                     b.Property<int>("QuyenId")
                         .HasColumnType("int");
 
-                    b.Property<string>("TenTaiKhoan")
-                        .IsRequired()
+                    b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("TrangThai")
                         .HasColumnType("int");
 
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("EmailIndex");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("UserNameIndex")
+                        .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.HasIndex("QuyenId");
 
-                    b.ToTable("TaiKhoans");
+                    b.ToTable("TaiKhoan", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
+                {
+                    b.HasOne("QuanLyNhaHang_DATN.Models.Quyen", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<int>", b =>
+                {
+                    b.HasOne("QuanLyNhaHang_DATN.Models.TaiKhoan", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<int>", b =>
+                {
+                    b.HasOne("QuanLyNhaHang_DATN.Models.TaiKhoan", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<int>", b =>
+                {
+                    b.HasOne("QuanLyNhaHang_DATN.Models.Quyen", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyNhaHang_DATN.Models.TaiKhoan", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<int>", b =>
+                {
+                    b.HasOne("QuanLyNhaHang_DATN.Models.TaiKhoan", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.Ban", b =>
@@ -445,11 +658,9 @@ namespace QuanLyNhaHang_DATN.Migrations
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.DatBan", b =>
                 {
-                    b.HasOne("QuanLyNhaHang_DATN.Models.Ban", null)
+                    b.HasOne("QuanLyNhaHang_DATN.Models.Ban", "Ban")
                         .WithMany("DatBans")
-                        .HasForeignKey("BanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("BanId");
 
                     b.HasOne("QuanLyNhaHang_DATN.Models.KhachHang", "KhachHang")
                         .WithMany()
@@ -458,6 +669,8 @@ namespace QuanLyNhaHang_DATN.Migrations
                     b.HasOne("QuanLyNhaHang_DATN.Models.NhanVien", "NhanVien")
                         .WithMany()
                         .HasForeignKey("NhanVienId");
+
+                    b.Navigation("Ban");
 
                     b.Navigation("KhachHang");
 

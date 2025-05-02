@@ -7,7 +7,7 @@ namespace QuanLyNhaHang_DATN.Services.BanService
     public interface IBanService : IBaseService<Ban>
     {
         Task<IEnumerable<Ban>> GetByKhuVucBanAsync(int khuVucBanId);
-        //Task<IEnumerable<Ban>> GetAvailableAsync();
+        Task<List<Ban>> GetAvailableBansAsync();
 
         Task<(IEnumerable<Ban> Items, int TotalCount)> GetPagedAsync(int pageIndex, int pageSize, BanFilterModel filter);
     }

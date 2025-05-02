@@ -9,5 +9,8 @@ namespace QuanLyNhaHang_DATN.Services.TaiKhoanService
     {
         Task<Result<TaiKhoan>> DangKyAsync(DangKyViewModel model);
         Task<Result<TaiKhoan>> DangNhapAsync(DangNhapViewModel model);
+        Task DangXuatAsync();
+       // Task<bool> CheckExistUsernameAsync(string username);
+        Task<Result<TaiKhoan>> CreateUserAsync(string username, string password, int quyenId, string tenNhanVien, string sdt, DateTime? ngaySinh, string diaChi);
     }
 }

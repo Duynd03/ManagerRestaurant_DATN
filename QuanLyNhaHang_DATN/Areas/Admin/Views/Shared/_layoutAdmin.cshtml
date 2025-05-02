@@ -78,7 +78,7 @@
                 <div class="sidebar-content">
                     <ul class="nav nav-secondary">
                         <li class="nav-item">
-                            <a href="#">
+                            <a href="/Admin/Dashboard/Index">
                                 <i class="fas fa-home"></i>
                                 <p>Dashboard</p>
 
@@ -93,8 +93,13 @@
                             <div class="collapse" id="charts">
                                 <ul class="nav nav-collapse">
                                     <li>
-                                        <a href="#">
-                                            <span class="sub-item">Sơ đồ bàn</span>
+                                        <a href="/Admin/DatBan/DanhSachBanTrong">
+                                            <span class="sub-item">Danh sách bàn trống</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="/Admin/DatBan/DanhSachKhachHangChoXepBan">
+                                            <span class="sub-item">Danh sách khách hàng chờ xếp bàn</span>
                                         </a>
                                     </li>
                                     <li>
@@ -524,48 +529,42 @@
                             </li>
 
                             <li class="nav-item topbar-user dropdown hidden-caret">
-                                <a class="dropdown-toggle profile-pic"
+                                <a class="dropdown-toggle"
                                    data-bs-toggle="dropdown"
                                    href="#"
                                    aria-expanded="false">
-                                    <div class="avatar-sm">
-                                        <img src="~/img/admin/profile.jpg"
-                                             alt="..."
-                                             class="avatar-img rounded-circle" />
-                                    </div>
                                     <span class="profile-username">
                                         <span class="op-7">Hi,</span>
-                                        <span class="fw-bold">Hizrian</span>
+                                        @if (User.Identity.IsAuthenticated)
+                                        {
+                                            <span class="fw-bold">@(User.Claims.FirstOrDefault(c => c.Type == "DisplayName")?.Value ?? "User")</span>
+                                            <span class="text-muted ms-2">@(User.Claims.FirstOrDefault(c => c.Type == "RoleName")?.Value ?? "Role")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="fw-bold">Guest</span>
+                                        }
                                     </span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-user animated fadeIn">
-                                    <div class="dropdown-user-scroll scrollbar-outer">
-                                    <li>
-                                        <div class="user-box">
-                                            <div class="avatar-lg">
-                                                <img src="~/img/admin/profile.jpg"
-                                                     alt="image profile"
-                                                     class="avatar-img rounded" />
-                                            </div>
-                                            <div class="u-text">
-                                                <h4>Hizrian</h4>
-                                                <p class="text-muted">hello@example.com</p>
-                                                <a href="profile.html"
-                                                   class="btn btn-xs btn-secondary btn-sm">View Profile</a>
-                                            </div>
-                                        </div>
-                                    </li>
-                                    <li>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="#">My Profile</a>
-                                        <a class="dropdown-item" href="#">My Balance</a>
-                                        <a class="dropdown-item" href="#">Inbox</a>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="#">Account Setting</a>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="#">Logout</a>
-                                    </li>
-                    </div>
+                                    @if (User.Identity.IsAuthenticated)
+                                    {
+                                        <li>
+                                            <form asp-area="Admin" asp-controller="Account" asp-action="DangXuat" method="post">
+                                                <button type="submit" class="dropdown-item">Đăng xuất</button>
+                                            </form>
+                                        </li>
+                                    }
+                                    else
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" href="@Url.Action("DangNhap", "Account", new { area = "Admin" })">Login</a>
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
+                    </ul>
+                    </li>
                     </ul>
                     </li>
                     </ul>

@@ -22,10 +22,11 @@ namespace QuanLyNhaHang_DATN.Services.BanService
         {
             return await _banRepository.GetByKhuVucBanAsync(khuVucBanId);
         }
-        //public async Task<IEnumerable<Ban>> GetAvailableAsync()
-        //{
-        //    return await _banRepository.GetAvailableAsync();
-        //}
+        public async Task<List<Ban>> GetAvailableBansAsync()
+        {
+            var bans = await _banRepository.GetAvailableAsync();
+            return bans.ToList();
+        }
 
         public async Task<(IEnumerable<Ban> Items, int TotalCount)> GetPagedAsync(int pageIndex, int pageSize, BanFilterModel filter)
         {

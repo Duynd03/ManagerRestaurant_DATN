@@ -15,11 +15,11 @@ namespace QuanLyNhaHang_DATN.Models
         public DateTime ThoiGianDatBan { get; set; }
         public int SoLuongNguoi { get; set; }
         public decimal CocTien { get; set; }
-        public string GhiChu { get; set; }
+        public string? GhiChu { get; set; }
         public bool? IsDatHo { get; set; }
         public string? TenLienHe { get; set; }
         public string? SDTLienHe { get; set; }
-        public int BanId { get; set; }
+        public int? BanId { get; set; }
         public DateTime ThoiGianTao { get; set; } = DateTime.Now;
         public DateTime? ThoiGianKetThuc { get; set; }
         public TrangThaiBanDat TrangThai { get; set; }
@@ -31,6 +31,11 @@ namespace QuanLyNhaHang_DATN.Models
         [ForeignKey("NhanVienId")]
         [ValidateNever]
         public NhanVien NhanVien { get; set; }
+
+        [ForeignKey("BanId")]
+        [ValidateNever]
+        public Ban Ban { get; set; }
+
         [ValidateNever]
         public virtual ICollection<GoiMon> GoiMons { get; set; }
 

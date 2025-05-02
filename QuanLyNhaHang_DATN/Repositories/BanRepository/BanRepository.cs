@@ -13,10 +13,13 @@ namespace QuanLyNhaHang_DATN.Repositories.BanRepository
             return await _dbSet.Where(m => m.KhuVucBanId == khuVucBanId).ToListAsync();
         }
 
-        //public async Task<IEnumerable<Ban>> GetAvailableAsync()
-        //{
-        //    return await _dbSet.Where(m => m.TrangThai == TrangThaiMonAn.CoSan).ToListAsync();
-        //}
+        public async Task<IEnumerable<Ban>> GetAvailableAsync()
+        {
+            return await _dbSet
+                .Where(m => m.TrangThai == TrangThaiBan.Trong)
+                .Include(m => m.KhuVucBan)
+                .ToListAsync();
+        }
 
     }
 }

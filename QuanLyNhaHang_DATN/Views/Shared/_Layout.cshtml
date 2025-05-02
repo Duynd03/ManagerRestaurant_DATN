@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@inject QuanLyNhaHang_DATN.Services.KhachHangService.IKhachHangService _khachHangService
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -49,39 +50,65 @@
                     <div class="navbar-nav ms-auto py-0 pe-4">
                         <a asp-controller="Home" asp-action="Index" class="nav-item nav-link active">Trang chủ</a>
                         <a asp-controller="Home" asp-action="About" class="nav-item nav-link">Thông tin</a>
-                        <a asp-controller="Home" asp-action="Reservation" class="nav-item nav-link">Đặt bàn</a>
+                       @*  <a asp-controller="Home" asp-action="Reservation" class="nav-item nav-link">Đặt bàn</a> *@
+                        <a asp-controller="DatBan" asp-action="Create" class="nav-item nav-link">Đặt bàn</a>
                         <a asp-controller="Home" asp-action="Menu" class="nav-item nav-link">Thực đơn</a>
                         <a asp-controller="Home" asp-action="Contact" class="nav-item nav-link">Liên hệ</a>
                     </div>
                  
-                    @* <div class="btn-group shadow-sm" role="group">
-                        <a asp-controller="Account" asp-action="DangNhap"
-                           class="btn btn-outline-primary rounded-start-pill px-3">
-                            <i class="fas fa-sign-in-alt me-1"></i> Đăng nhập
-                        </a>
-                        <a asp-controller="Account" asp-action="DangKy"
-                           class="btn btn-primary rounded-end-pill px-3">
-                            <i class="fas fa-user-plus me-1"></i> Đăng ký
-                        </a>
-                    </div> *@
                     <div class="btn-group ms-2">
-                        <a asp-controller="Account" asp-action="DangNhap"
-                           class="btn btn-outline-light"
-                           data-bs-toggle="modal"
-                           data-bs-target="#loginModal">
-                            <i class="fas fa-sign-in-alt me-1"></i> Đăng nhập
-                        </a>
-                        <a asp-controller="Account" asp-action="DangKy"
-                           class="btn btn-success"
-                           data-bs-toggle="modal"
-                           data-bs-target="#registerModal">
-                            <i class="fas fa-user-plus me-1"></i> Đăng ký
-                        </a>
+                        @* @if (User.Identity.IsAuthenticated)
+                        {
+                            var userName = User.Identity.Name;
+                            var khachHang = await _khachHangService.GetByTaiKhoanUsernameAsync(userName);
+                            var tenKhachHang = khachHang?.TenKhachHang ?? userName;
+
+                            <span class="text-light align-self-center me-3">Hi, @tenKhachHang</span>
+                            <a asp-controller="Account" asp-action="Logout" class="btn btn-danger">
+                                <i class="fas fa-sign-out-alt me-1"></i> Đăng xuất
+                            </a>
+                        } *@
+                        <form id="logoutForm" style="display: none;">
+                            @Html.AntiForgeryToken()
+                        </form>
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            var userName = User.Identity.Name;
+                            var khachHang = await _khachHangService.GetByTaiKhoanUsernameAsync(userName);
+                            var tenKhachHang = khachHang?.TenKhachHang ?? userName;
+
+                            <div class="nav-item dropdown">
+                                <a class="dropdown-toggle text-light align-self-center me-3" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Hi, @tenKhachHang
+                                </a>
+                                <ul class="dropdown-menu dropdown-user animated fadeIn">
+                           
+                                    <li>
+                                  
+                                        <a class="dropdown-item" asp-controller="Account" asp-action="LichSuDatBan">Lịch sử đặt bàn</a>
+                                        <a class="dropdown-item" asp-controller="Account" asp-action="ThongTinCaNhan">Thông tin cá nhân</a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item logout-link" href="#" data-url="@Url.Action("DangXuat", "Account")">Đăng xuất</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
+                        else
+                        {
+                            <a href="#" class="btn btn-outline-light login-link" data-url="@Url.Action("DangNhap", "Account")">
+                                <i class="fas fa-sign-in-alt me-1"></i> Đăng nhập
+                            </a>
+                            <a href="#" class="btn btn-success register-link" data-url="@Url.Action("DangKy", "Account")">
+                                <i class="fas fa-user-plus me-1"></i> Đăng ký
+                            </a>
+                        }
                     </div>
                 </div>
             </nav>
-            @await Html.PartialAsync("~/Views/Account/_LoginModal.cshtml")
-            @await Html.PartialAsync("~/Views/Account/_RegisterModal.cshtml")
+          @*   @await Html.PartialAsync("~/Views/Account/_LoginModal.cshtml")
+            @await Html.PartialAsync("~/Views/Account/_RegisterModal.cshtml") *@
+            <!-- Container để load modal -->
+            <div id="modalContainer"></div>
     @RenderBody()
         </div>
     </div>
@@ -162,9 +189,173 @@
     <script src="lib/tempusdominus/js/moment.min.js"></script>
     <script src="lib/tempusdominus/js/moment-timezone.min.js"></script>
     <script src="lib/tempusdominus/js/tempusdominus-bootstrap-4.min.js"></script>
+    <!-- Validation Scripts (nếu cần) -->
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
 
     <!-- Template Javascript -->
     <script src="js/main.js"></script>
+    <!-- Custom Script để load modal và xử lý form bằng AJAX -->
+    <script>
+        $(document).ready(function () {
+            console.log("jQuery and Bootstrap loaded"); // Debug
+
+            // Biến để theo dõi modal hiện tại
+            let currentModal = null;
+
+            // Hàm đóng tất cả modal và làm sạch modalContainer
+            function closeAllModals() {
+                $('.modal').modal('hide'); // Đóng tất cả modal
+                $('#modalContainer').empty(); // Xóa nội dung trong modalContainer
+                currentModal = null; // Reset modal hiện tại
+            }
+
+            // Hàm load modal
+            function loadModal(url, modalId) {
+                // Kiểm tra nếu modal hiện tại đã mở và là modal cần load
+                if (currentModal === modalId) {
+                    console.log("Modal " + modalId + " đã được mở, không load lại"); // Debug
+                    return; // Không load lại nếu modal đã mở
+                }
+
+                closeAllModals(); // Đóng và làm sạch trước khi load modal mới
+                $.ajax({
+                    url: url,
+                    method: "GET",
+                    success: function (data) {
+                        $('#modalContainer').html(data);
+                        $(modalId).modal('show');
+                        currentModal = modalId; // Cập nhật modal hiện tại
+                    },
+                    error: function () {
+                        alert("Không thể tải form!");
+                    }
+                });
+            }
+
+            // Load modal khi nhấn Đăng nhập
+            $(document).off('click', '.login-link').on('click', '.login-link', function (e) {
+                e.preventDefault();
+                var url = $(this).data('url');
+                console.log("Opening login modal"); // Debug
+                loadModal(url, '#loginModal');
+            });
+
+            // Load modal khi nhấn Đăng ký
+            $(document).off('click', '.register-link').on('click', '.register-link', function (e) {
+                e.preventDefault();
+                var url = $(this).data('url');
+                console.log("Opening register modal"); // Debug
+                loadModal(url, '#registerModal');
+            });
+
+            // Xử lý gửi form đăng ký bằng AJAX
+            $(document).off('submit', '#registerForm').on('submit', '#registerForm', function (e) {
+                e.preventDefault();
+                console.log("Register form submitted"); // Debug
+
+                var form = $(this);
+                var messages = $('#registerMessages');
+                messages.empty();
+
+                $.ajax({
+                    url: '@Url.Action("DangKy", "Account")',
+                    method: "POST",
+                    data: form.serialize(),
+                    headers: {
+                        "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        console.log("AJAX success:", response); // Debug
+                        if (response.success) {
+                            messages.html('<div class="alert alert-success">Đăng ký thành công! Đang chuyển hướng...</div>');
+                            setTimeout(function () {
+                                loadModal('@Url.Action("DangNhap", "Account")', '#loginModal');
+                            }, 2000);
+                        } else {
+                            var errorMessages = response.errors ? response.errors.join("<br/>") : response.message;
+                            messages.html('<div class="alert alert-danger">' + errorMessages + '</div>');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("AJAX error:", status, error); // Debug
+                        messages.html('<div class="alert alert-danger">Đã có lỗi xảy ra, vui lòng thử lại! (Lỗi: ' + error + ')</div>');
+                    }
+                });
+            });
+
+            // Xử lý gửi form đăng nhập bằng AJAX
+            $(document).off('submit', '#loginForm').on('submit', '#loginForm', function (e) {
+                e.preventDefault();
+                console.log("Login form submitted"); // Debug
+
+                var form = $(this);
+                var messages = $('#loginMessages');
+                messages.empty();
+
+                $.ajax({
+                    url: '@Url.Action("DangNhap", "Account")',
+                    method: "POST",
+                    data: form.serialize(),
+                    headers: {
+                        "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        console.log("AJAX success:", response); // Debug
+                        if (response.success) {
+                            messages.html('<div class="alert alert-success">Đăng nhập thành công! Đang chuyển hướng...</div>');
+                            setTimeout(function () {
+                                window.location.href = response.redirectUrl;
+                            }, 2000);
+                        } else {
+                            messages.html('<div class="alert alert-danger">' + response.message + '</div>');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("AJAX error:", status, error); // Debug
+                        messages.html('<div class="alert alert-danger">Đã có lỗi xảy ra, vui lòng thử lại! (Lỗi: ' + error + ')</div>');
+                    }
+                });
+            });
+          
+        });
+        // Xử lý đăng xuất trong dropdown
+        $(document).off('click', '.logout-link').on('click', '.logout-link', function (e) {
+            e.preventDefault(); // Ngăn hành vi mặc định (GET)
+            console.log("Logout link clicked"); // Log để kiểm tra sự kiện
+            var url = $(this).data('url');
+            if (!url) {
+                console.log("Error: No URL found in data-url");
+                alert("Không tìm thấy URL đăng xuất!");
+                return;
+            }
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            if (!token) {
+                console.log("Error: No CSRF token found");
+                alert("Không tìm thấy CSRF token!");
+                return;
+            }
+            $.ajax({
+                url: url,
+                method: "POST",
+                headers: {
+                    "RequestVerificationToken": token
+                },
+                success: function (response) {
+                    console.log("Logout success:", response);
+                    if (response.success) {
+                        window.location.href = response.redirectUrl;
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.log("Logout AJAX error:", xhr.status, xhr.responseText, error);
+                    alert("Đã có lỗi xảy ra khi đăng xuất! Mã lỗi: " + xhr.status);
+                }
+            });
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

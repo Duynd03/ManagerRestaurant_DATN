@@ -10,11 +10,9 @@
   <ItemGroup>
     <Folder Include="Repositories\PaymentRepository\" />
     <Folder Include="Repositories\OrderRepository\" />
-    <Folder Include="Repositories\ReservationRepository\" />
     <Folder Include="Services\Extensions\" />
     <Folder Include="Services\PaymentService\" />
     <Folder Include="Services\OrderService\" />
-    <Folder Include="Services\ReservationService\" />
     <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 

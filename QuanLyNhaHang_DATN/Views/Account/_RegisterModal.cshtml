@@ -10,25 +10,14 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <form asp-action="DangKy" asp-controller="Account" method="post">
+            <form id="registerForm" method="post">
                 @Html.AntiForgeryToken()
                 <div class="modal-body">
-                    @if (TempData["SuccessMessage"] != null)
-                    {
-                        <div class="alert alert-success" role="alert">
-                            @TempData["SuccessMessage"]
-                        </div>
-                    }
-                    @if (ViewData.ModelState.ContainsKey(string.Empty))
-                    {
-                        <div class="alert alert-danger" role="alert">
-                            @Html.ValidationMessage(string.Empty)
-                        </div>
-                    }
+                    <div id="registerMessages"></div>
 
                     <div class="mb-3">
                         <label asp-for="TenKhachHang" class="form-label"></label>
-                        <input asp-for="TenKhachHang" class="form-control" placeholder="Họ và tên " />
+                        <input asp-for="TenKhachHang" class="form-control" placeholder="Họ và tên" />
                         <span asp-validation-for="TenKhachHang" class="text-danger"></span>
                     </div>
 
@@ -41,12 +30,12 @@
                     <div class="mb-3">
                         <label asp-for="Email" class="form-label"></label>
                         <input asp-for="Email" class="form-control" placeholder="example@gmail.com" />
-                        <span asp-validation-for="Email" class="text-danger"></span>
+                        @* <span asp-validation-for="Email" class="text-danger"></span> *@
                     </div>
 
                     <div class="mb-3">
                         <label asp-for="DiaChi" class="form-label"></label>
-                        <input asp-for="DiaChi" class="form-control" placeholder="" />
+                        <input asp-for="DiaChi" class="form-control" placeholder="Địa chỉ (tùy chọn)" />
                        @*  <span asp-validation-for="DiaChi" class="text-danger"></span> *@
                     </div>
 
@@ -58,13 +47,13 @@
 
                     <div class="mb-3">
                         <label asp-for="MatKhau" class="form-label"></label>
-                        <input asp-for="MatKhau" class="form-control" placeholder="Ít nhất 8 ký tự" />
+                        <input asp-for="MatKhau" class="form-control" type="password" placeholder="Ít nhất 8 ký tự" />
                         <span asp-validation-for="MatKhau" class="text-danger"></span>
                     </div>
 
                     <div class="mb-3">
                         <label asp-for="NhapLaiMatKhau" class="form-label"></label>
-                        <input asp-for="NhapLaiMatKhau" class="form-control" placeholder="Nhập lại mật khẩu" />
+                        <input asp-for="NhapLaiMatKhau" class="form-control" type="password" placeholder="Nhập lại mật khẩu" />
                         <span asp-validation-for="NhapLaiMatKhau" class="text-danger"></span>
                     </div>
 
@@ -84,19 +73,10 @@
             </form>
 
             <div class="text-center pb-3">
-                <a href="#" class="text-decoration-none"
-                   data-bs-toggle="modal"
-                   data-bs-target="#loginModal"
-                   data-bs-dismiss="modal">
+                <a href="#" class="text-decoration-none login-link" data-url="@Url.Action("DangNhap", "Account")" data-bs-dismiss="modal">
                     Đã có tài khoản? <strong>Đăng nhập ngay</strong>
                 </a>
             </div>
         </div>
     </div>
 </div>
-
-@section Scripts {
-   @*  <partial name="_ValidationScriptsPartial" /> *@
-    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
-}

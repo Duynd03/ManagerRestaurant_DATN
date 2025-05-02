@@ -1,76 +1,115 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using QuanLyNhaHang_DATN.Services.KhachHangService;
 using QuanLyNhaHang_DATN.Services.TaiKhoanService;
 using QuanLyNhaHang_DATN.ViewModels;
-using QuanLyNhaHang_DATN.Common;
-using System.Threading.Tasks;
+using System;
 
-namespace QuanLyNhaHang_DATN.Controllers
+public class AccountController : Controller
 {
-    public class AccountController : Controller
+    private readonly ITaiKhoanService _taiKhoanService;
+    private readonly IKhachHangService _khachHangService;
+
+    public AccountController(ITaiKhoanService taiKhoanService, IKhachHangService khachHangService)
     {
-        private readonly ITaiKhoanService _taiKhoanService;
+        _taiKhoanService = taiKhoanService;
+        _khachHangService = khachHangService;
+    }
 
-        public AccountController(ITaiKhoanService taiKhoanService)
-        {
-            _taiKhoanService = taiKhoanService;
-        }
+    [HttpGet]
+    public IActionResult DangKy()
+    {
+        return PartialView("_RegisterModal", new DangKyViewModel());
+    }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DangNhap(DangNhapViewModel model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return PartialView("_LoginModal", model);
-            }
-
-            var result = await _taiKhoanService.DangNhapAsync(model);
-            if (!result.Success)
-            {
-                ModelState.AddModelError(string.Empty, result.Message);
-                return PartialView("_LoginModal", model);
-            }
-
-            // Lưu thông tin vào session
-            HttpContext.Session.SetInt32("TaiKhoanId", result.Data.Id);
-            HttpContext.Session.SetString("TenTaiKhoan", result.Data.TenTaiKhoan);
-
-            TempData["SuccessMessage"] = "Đăng nhập thành công.";
-            return RedirectToAction("Index", "Home");
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DangKy(DangKyViewModel model)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DangKy(DangKyViewModel model)
+    {
+        try
         {
             if (!ModelState.IsValid)
             {
-                return PartialView("_RegisterModal", model);
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                      .Select(e => e.ErrorMessage)
+                                      .ToList();
+                return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors });
             }
 
             if (!model.AgreeTerms)
             {
-                ModelState.AddModelError("AgreeTerms", "Bạn phải đồng ý với điều khoản dịch vụ.");
-                return PartialView("_RegisterModal", model);
+                return Json(new { success = false, message = "Bạn phải đồng ý với điều khoản dịch vụ để tiếp tục." });
             }
 
             var result = await _taiKhoanService.DangKyAsync(model);
-            if (!result.Success)
+            if (result.Success)
             {
-                ModelState.AddModelError(string.Empty, result.Message);
-                return PartialView("_RegisterModal", model);
+                return Json(new { success = true, redirectUrl = Url.Action("DangNhap", "Account") });
             }
 
-            TempData["SuccessMessage"] = "Đăng ký thành công. Vui lòng đăng nhập.";
-            return RedirectToAction("Index", "Home");
+            var errorMessages = result.Errors.ToList();
+            return Json(new { success = false, message = "Đăng ký thất bại", errors = errorMessages });
         }
-
-        [HttpGet]
-        public IActionResult Logout()
+        catch (Exception ex)
         {
+            return Json(new { success = false, message = $"Lỗi hệ thống: {ex.Message}" });
+        }
+    }
+
+    [HttpGet]
+    public IActionResult DangNhap()
+    {
+        return PartialView("_LoginModal", new DangNhapViewModel());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DangNhap(DangNhapViewModel model)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                      .Select(e => e.ErrorMessage)
+                                      .ToList();
+                return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors });
+            }
+
+            var result = await _taiKhoanService.DangNhapAsync(model);
+            if (result.Success)
+            {
+                return Json(new { success = true, redirectUrl = Url.Action("Index", "Home") });
+            }
+
+            return Json(new { success = false, message = result.Message });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Lỗi hệ thống: {ex.Message}" });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DangXuat()
+    {
+        try
+        {
+            await _taiKhoanService.DangXuatAsync();
             HttpContext.Session.Clear();
-            TempData["SuccessMessage"] = "Đăng xuất thành công.";
-            return RedirectToAction("Index", "Home");
+            return Json(new { success = true, redirectUrl = Url.Action("Index", "Home") });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Lỗi khi đăng xuất: {ex.Message}" });
         }
     }
 }
+
+// thanh toán tt
+// admin xử lý đặt bàn  ds chờ -> list bàn trống _> chọn bàn
+// hủy bàn, chuyển bàn
+// goi món 
+// hóa đơn. hóa đơn hủy, chi tiết hóa đơn // xuất hóa đơn
+// dashboard
+//phân quyền chức năng // policy
