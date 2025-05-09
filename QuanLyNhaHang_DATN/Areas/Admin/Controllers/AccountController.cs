@@ -6,6 +6,7 @@ using QuanLyNhaHang_DATN.Services.TaiKhoanService;
 using QuanLyNhaHang_DATN.ViewModels;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
+using QuanLyNhaHang_DATN.Models;
 
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
@@ -14,11 +15,19 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
     {
         private readonly ITaiKhoanService _taiKhoanService;
         private readonly INhanVienService _nhanVienService;
+        private readonly UserManager<TaiKhoan> _userManager;
+        private readonly SignInManager<TaiKhoan> _signInManager;
 
-        public AccountController(ITaiKhoanService taiKhoanService, INhanVienService nhanVienService)
+        public AccountController(
+            ITaiKhoanService taiKhoanService,
+            INhanVienService nhanVienService,
+            UserManager<TaiKhoan> userManager,
+            SignInManager<TaiKhoan> signInManager)
         {
             _taiKhoanService = taiKhoanService;
             _nhanVienService = nhanVienService;
+            _userManager = userManager;
+            _signInManager = signInManager;
         }
 
         [HttpGet]
@@ -27,7 +36,6 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         {
             return View(new DangNhapViewModel());
         }
-
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -46,33 +54,68 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 var result = await _taiKhoanService.DangNhapAsync(model);
                 if (result.Success)
                 {
-                    // Kiểm tra vai trò: Chỉ admin, nhân viên, kế toán được truy cập khu vực Admin
-                    if (result.Data.QuyenId == 1 || result.Data.QuyenId == 2 || result.Data.QuyenId == 3)
+                    var user = await _userManager.FindByNameAsync(model.TenTaiKhoan);
+                    if (user == null)
                     {
-                        // Tạo danh sách Claims
-                        var claims = new List<Claim>
+                        return Json(new { success = false, message = "Người dùng không tồn tại trong hệ thống Identity." });
+                    }
+
+                    // Xóa các claims cũ nếu có
+                    var existingClaims = await _userManager.GetClaimsAsync(user);
+                    if (existingClaims.Any())
+                    {
+                        await _userManager.RemoveClaimsAsync(user, existingClaims);
+                    }
+
+                    // Thêm thông tin bổ sung vào Claims
+                    string displayName = user.UserName;
+                    string nhanVienId = null;
+                    string tenNhanVien = null;
+                    string roleName = "Không xác định";
+
+                    // Xác định role và thông tin nhân viên
+                    if (result.Data.QuyenId == 1) // Admin
+                    {
+                        roleName = "Admin";
+                        displayName = "Quản trị hệ thống";
+                    }
+                    else if (result.Data.QuyenId == 2 || result.Data.QuyenId == 3) // Nhân viên hoặc Kế toán
+                    {
+                        var nhanVien = await _nhanVienService.GetByTaiKhoanUsernameAsync(user.UserName);
+                        if (nhanVien != null)
                         {
-                            new Claim(ClaimTypes.Name, result.Data.UserName),
-                            new Claim("DisplayName", result.Data.QuyenId == 1 ? "Admin" : (await _nhanVienService.GetByTaiKhoanUsernameAsync(result.Data.UserName))?.TenNhanVien ?? result.Data.UserName),
-                            new Claim("RoleName", result.Data.QuyenId == 1 ? "Quản lý" : (result.Data.QuyenId == 2 ? "Nhân viên" : "Kế toán")),
-                            new Claim(ClaimTypes.Role, result.Data.QuyenId == 1 ? "Quản lý" : (result.Data.QuyenId == 2 ? "Nhân viên" : "Kế toán"))
-                        };
+                            nhanVienId = nhanVien.Id.ToString();
+                            tenNhanVien = nhanVien.TenNhanVien;
+                            displayName = tenNhanVien;
 
-                        // Tạo ClaimsIdentity
-                        var claimsIdentity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
-
-                        // Đăng nhập với Claims
-                        await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme,
-                            new ClaimsPrincipal(claimsIdentity),
-                            new AuthenticationProperties { IsPersistent = false });
-
-                        return Json(new { success = true, redirectUrl = Url.Action("Index", "DashBoard", new { area = "Admin" }) });
+                            roleName = result.Data.QuyenId == 2 ? "NhanVien" : "KeToan";
+                        }
                     }
-                    else
+
+                    // Tạo danh sách claims
+                    var claims = new List<Claim>
                     {
-                        await _taiKhoanService.DangXuatAsync();
-                        return Json(new { success = false, message = "Bạn không có quyền truy cập khu vực quản trị." });
+                        new Claim("DisplayName", displayName),
+                        new Claim(ClaimTypes.Role, roleName),
+                        new Claim("RoleName", roleName)
+                    };
+
+                    if (!string.IsNullOrEmpty(nhanVienId))
+                    {
+                        claims.Add(new Claim("NhanVienId", nhanVienId));
                     }
+                    if (!string.IsNullOrEmpty(tenNhanVien))
+                    {
+                        claims.Add(new Claim("TenNhanVien", tenNhanVien));
+                    }
+
+                    // Thêm claims vào user
+                    await _userManager.AddClaimsAsync(user, claims);
+
+                    // Đăng nhập với SignInManager
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+
+                    return Json(new { success = true, redirectUrl = Url.Action("Index", "DashBoard", new { area = "Admin" }) });
                 }
 
                 return Json(new { success = false, message = result.Message });
@@ -82,6 +125,60 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 return Json(new { success = false, message = $"Lỗi hệ thống: {ex.Message}" });
             }
         }
+        //[HttpPost]
+        //[AllowAnonymous]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> DangNhap(DangNhapViewModel model)
+        //{
+        //    try
+        //    {
+        //        if (!ModelState.IsValid)
+        //        {
+        //            var errors = ModelState.Values.SelectMany(v => v.Errors)
+        //                                  .Select(e => e.ErrorMessage)
+        //                                  .ToList();
+        //            return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors });
+        //        }
+
+        //        var result = await _taiKhoanService.DangNhapAsync(model);
+        //        if (result.Success)
+        //        {
+        //            // Kiểm tra vai trò: Chỉ admin, nhân viên, kế toán được truy cập khu vực Admin
+        //            if (result.Data.QuyenId == 1 || result.Data.QuyenId == 2 || result.Data.QuyenId == 3)
+        //            {
+        //                // Tạo danh sách Claims
+        //                var claims = new List<Claim>
+        //                {
+        //                    new Claim(ClaimTypes.Name, result.Data.UserName),
+        //                    new Claim("DisplayName", result.Data.QuyenId == 1 ? "Admin" : (await _nhanVienService.GetByTaiKhoanUsernameAsync(result.Data.UserName))?.TenNhanVien ?? result.Data.UserName),
+        //                    new Claim("RoleName", result.Data.QuyenId == 1 ? "Quản lý" : (result.Data.QuyenId == 2 ? "Nhân viên" : "Kế toán")),
+        //                    new Claim(ClaimTypes.Role, result.Data.QuyenId == 1 ? "Quản lý" : (result.Data.QuyenId == 2 ? "Nhân viên" : "Kế toán"))
+        //                };
+
+        //                // Tạo ClaimsIdentity
+        //                var claimsIdentity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
+
+        //                // Đăng nhập với Claims
+        //                await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme,
+        //                    new ClaimsPrincipal(claimsIdentity),
+        //                    new AuthenticationProperties { IsPersistent = false });
+
+        //                return Json(new { success = true, redirectUrl = Url.Action("Index", "DashBoard", new { area = "Admin" }) });
+        //            }
+        //            else
+        //            {
+        //                await _taiKhoanService.DangXuatAsync();
+        //                return Json(new { success = false, message = "Bạn không có quyền truy cập khu vực quản trị." });
+        //            }
+        //        }
+
+        //        return Json(new { success = false, message = result.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return Json(new { success = false, message = $"Lỗi hệ thống: {ex.Message}" });
+        //    }
+        //}
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -90,12 +187,20 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
             try
             {
                 await _taiKhoanService.DangXuatAsync();
-                await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme); // Đảm bảo đăng xuất scheme đúng
-                return Json(new { success = true, redirectUrl = Url.Action("DangNhap", "Account", new { area = "Admin" }) });
+                return Json(new
+                {
+                    success = true,
+                    redirectUrl = Url.Action("DangNhap", "Account", new { area = "Admin" })
+                    
+            });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Lỗi khi đăng xuất: {ex.Message}" });
+                return Json(new
+                {
+                    success = false,
+                    message = $"Lỗi khi đăng xuất: {ex.Message}"
+                });
             }
         }
 

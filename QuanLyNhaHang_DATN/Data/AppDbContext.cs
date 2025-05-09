@@ -24,6 +24,7 @@ namespace QuanLyNhaHang_DATN.Data
         public DbSet<Quyen_ChucNang> Quyen_ChucNangs { get; set; }
         public DbSet<HoaDon> HoaDons { get; set; }
         public DbSet<GoiMon> GoiMons { get; set; }
+        public DbSet<DatBan_Ban> DatBan_Bans { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -45,6 +46,26 @@ namespace QuanLyNhaHang_DATN.Data
             builder.Entity<Quyen_ChucNang>().ToTable("Quyen_ChucNang");
             builder.Entity<HoaDon>().ToTable("HoaDon");
             builder.Entity<GoiMon>().ToTable("GoiMon");
+            builder.Entity<DatBan_Ban>().ToTable("DatBan_Ban");
+
+            // Cấu hình khóa chính composite cho DatBan_Ban
+            builder.Entity<DatBan_Ban>()
+                .HasKey(db => new { db.DatBanId, db.BanId });
+
+            // Cấu hình quan hệ nhiều-nhiều cho DatBan_Ban
+            builder.Entity<DatBan_Ban>()
+                .HasOne(db => db.DatBan)
+                .WithMany(d => d.DatBanBans)
+                .HasForeignKey(db => db.DatBanId);
+
+            builder.Entity<DatBan_Ban>()
+                .HasOne(db => db.Ban)
+                .WithMany(b => b.DatBanBans)
+                .HasForeignKey(db => db.BanId);
+
+            // Cấu hình khóa chính composite cho Quyen_ChucNang (nếu cần)
+            //builder.Entity<Quyen_ChucNang>()
+            //    .HasKey(qc => new { qc.IdQuyen, qc.IdChucNang });
         }
     }
 }

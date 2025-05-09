@@ -44,7 +44,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminArea", policy =>
-        policy.RequireRole("Quản lý", "Nhân viên", "Kế toán"));
+        policy.RequireRole("Admin", "NhanVien", "KeToan"));
 });
 
 // Thêm dịch vụ Session
@@ -80,10 +80,10 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-app.UseSession();
+
 app.UseAuthentication(); 
 app.UseAuthorization();
-
+app.UseSession();
 //app.MapControllerRoute(
 //    name: "Areas",
 //    pattern: "{area:exists}/{controller=DashBoard}/{action=Index}/{id?}"

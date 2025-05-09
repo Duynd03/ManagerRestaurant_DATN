@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@using System.Security.Claims
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -103,7 +104,7 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="#">
+                                        <a href="/Admin/DatBan/LichDatBan">
                                             <span class="sub-item">Lịch đặt bàn</span>
                                         </a>
                                     </li>
@@ -537,23 +538,22 @@
                                         <span class="op-7">Hi,</span>
                                         @if (User.Identity.IsAuthenticated)
                                         {
-                                            <span class="fw-bold">@(User.Claims.FirstOrDefault(c => c.Type == "DisplayName")?.Value ?? "User")</span>
-                                            <span class="text-muted ms-2">@(User.Claims.FirstOrDefault(c => c.Type == "RoleName")?.Value ?? "Role")</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="fw-bold">Guest</span>
+                                            <span class="fw-bold">@(User.FindFirst("TenNhanVien")?.Value ?? User.FindFirst("DisplayName")?.Value ?? User.Identity?.Name)</span>
+                                            <span class="text-muted ms-2">@(User.FindFirst(ClaimTypes.Role)?.Value ?? "Không xác định")</span>
                                         }
                                     </span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-user animated fadeIn">
                                     @if (User.Identity.IsAuthenticated)
                                     {
+
                                         <li>
-                                            <form asp-area="Admin" asp-controller="Account" asp-action="DangXuat" method="post">
-                                                <button type="submit" class="dropdown-item">Đăng xuất</button>
-                                            </form>
+                                            <a class="dropdown-item logout-admin-link" href="#" data-url="@Url.Action("DangXuat", "Account", new { area = "Admin" })">Đăng xuất</a>
                                         </li>
+                                        <form id="adminLogoutForm" style="display: none;">
+                                            @Html.AntiForgeryToken()
+                                        </form>
+                                       
                                     }
                                     else
                                     {
@@ -696,7 +696,30 @@
             fillColor: "rgba(255, 165, 52, .14)",
         });
     </script>
-
+    <script>
+        $(document).ready(function () {
+            $(document).off('click', '.logout-admin-link').on('click', '.logout-admin-link', function (e) {
+                e.preventDefault();
+                var url = $(this).data('url');
+                var token = $('#adminLogoutForm input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: url,
+                    method: "POST",
+                    headers: { "RequestVerificationToken": token },
+                    success: function (response) {
+                        if (response.success) {
+                            window.location.href = response.redirectUrl;
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function (xhr) {
+                        alert("Lỗi khi đăng xuất: " + xhr.status);
+                    }
+                });
+            });
+        });
+    </script>
     @RenderSection("Scripts", required: false)
 </body>
 </html>

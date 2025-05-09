@@ -14,6 +14,11 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         Task<bool> HasTimeConflictAsync(int banId, DateTime thoiGianDatBan);
         Task UpdateBanAsync(Ban ban);
         Task<(IEnumerable<DatBan> Items, int TotalCount)> GetPagedAsync(int pageIndex, int pageSize, DatBanFilterModel filter);
+        //Task<Result<DatBan>> XepBanAsync(int datBanId, int[] banIds, int? nhanVienId);
+        Task AddDatBanBanAsync(DatBan_Ban datBanBan); // Thêm khai báo
+        Task<Result<DatBan>> XepBanAsync(int datBanId, List<int> banIds, int? nhanVienId);
+        Task<List<string>> GetBanGhepAsync(int datBanId);
+        Task<DatBan> GetByIdWithKhachHangAsync(int id);
     }
 
 }

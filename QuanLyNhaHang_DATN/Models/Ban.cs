@@ -20,7 +20,10 @@ namespace QuanLyNhaHang_DATN.Models
         [ValidateNever]
         public KhuVucBan KhuVucBan { get; set; }
         [ValidateNever]
-        public virtual ICollection<DatBan> DatBans { get; set; }
+        public virtual ICollection<DatBan_Ban> DatBanBans { get; set; }
+
+        //[ValidateNever]
+        //public virtual ICollection<DatBan> DatBans { get; set; }
     }
     public enum TrangThaiBan
     {

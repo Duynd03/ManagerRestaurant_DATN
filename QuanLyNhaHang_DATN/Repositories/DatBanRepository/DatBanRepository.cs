@@ -21,18 +21,26 @@ namespace QuanLyNhaHang_DATN.Repositories.DatBanRepository
             return await _dbSet
                 .Where(d => d.TrangThai == trangThai)
                 .Include(d => d.KhachHang)
-                .Include(d => d.Ban)
+                .Include(d => d.DatBanBans)
+                .ThenInclude(dbb => dbb.Ban)
                 .ThenInclude(b => b.KhuVucBan)
                 .ToListAsync();
         }
 
+
         public async Task<bool> HasTimeConflictAsync(int banId, DateTime thoiGianDatBan)
         {
-            return await _dbSet
-                .AnyAsync(d => d.BanId == banId
-                    && d.TrangThai == TrangThaiBanDat.DaXacNhan
-                    && d.ThoiGianDatBan.Date == thoiGianDatBan.Date
-                    && Math.Abs((d.ThoiGianDatBan - thoiGianDatBan).TotalHours) < 2);
+            var timeRange = TimeSpan.FromHours(2);
+            var startTime = thoiGianDatBan - timeRange;
+            var endTime = thoiGianDatBan + timeRange;
+
+            return await _context.DatBan_Bans
+                .Include(dbb => dbb.DatBan)
+                .AnyAsync(dbb =>
+                    dbb.BanId == banId &&
+                    dbb.DatBan.ThoiGianDatBan >= startTime &&
+                    dbb.DatBan.ThoiGianDatBan <= endTime &&
+                    dbb.DatBan.TrangThai != TrangThaiBanDat.DaHuy);
         }
     }
 }

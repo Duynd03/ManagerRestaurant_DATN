@@ -5,6 +5,8 @@
     var khuVucBans = ViewBag.KhuVucBanList as List<QuanLyNhaHang_DATN.Models.KhuVucBan>;
     string searchTenBan = ViewBag.SearchTenBan as string;
     int? selectedKhuVucBanId = ViewBag.SelectedKhuVucBanId;
+    int? datBanId = ViewBag.DatBanId;
+    int requiredBans = ViewBag.RequiredBans != null ? (int)ViewBag.RequiredBans : 1;
 }
 
 <div class="col-md-12">
@@ -25,9 +27,17 @@
             </div>
         }
 
+        @if (datBanId.HasValue)
+        {
+            var datBan = ViewBag.DatBanInfo as string ?? "";
+            <div class="alert alert-info" role="alert">
+                @datBan (Cần @requiredBans bàn)
+            </div>
+        }
+
         <!-- Form tìm kiếm -->
         <div id="searchFormContainer" class="card p-3 mb-3" style="display: none;">
-            <form id="searchForm">
+            <form id="searchForm" onsubmit="searchData(); return false;">
                 <div class="mb-3">
                     <label for="tenBan" class="form-label">Tên Bàn</label>
                     <input type="text" name="tenBan" class="form-control" value="@searchTenBan" placeholder="Nhập tên Bàn" />
@@ -54,42 +64,68 @@
         </div>
 
         <div class="card-body">
+            <!-- Thông báo lỗi từ AJAX -->
+            <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+
             <!-- Danh sách bàn trống -->
             <div class="table-responsive">
-                <table id="banTable" class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Tên bàn</th>
-                            <th>Khu vực</th>
-                            <th>Trạng thái</th>
-                            <th>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (!Model.Any())
-                        {
-                            <tr>
-                                <td colspan="5" class="text-center">Không có bàn trống nào.</td>
-                            </tr>
-                        }
-                        else
-                        {
-                            @foreach (var ban in Model)
+                @if (datBanId.HasValue)
+                {
+                    <form id="xepBanForm">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="datBanId" value="@datBanId" />
+
+                        <div class="alert alert-info">
+                            @if (requiredBans == 1)
                             {
-                                <tr>
-                                    <td>@ban.Id</td>
-                                    <td>@ban.TenBan</td>
-                                    <td>@(ban.KhuVucBan?.TenKhuVuc ?? "Không có Khu vực")</td>
-                                    <td>@ban.TrangThai.ToString()</td>
-                                    <td>
-                                        <a href="@Url.Action("XepBan", "DatBan", new { area = "Admin", id = ban.Id })" class="btn btn-sm btn-primary">Xếp bàn</a>
-                                    </td>
-                                </tr>
+                                <span>Vui lòng chọn 1 bàn</span>
                             }
-                        }
-                    </tbody>
-                </table>
+                            else
+                            {
+                                <span>Cần chọn ít nhất @requiredBans bàn</span>
+                            }
+                        </div>
+
+                        <table id="banTable" class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="50px">
+                                        @if (requiredBans > 1)
+                                        {
+                                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" />
+                                        }
+                                    </th>
+                                    <th>ID</th>
+                                    <th>Tên bàn</th>
+                                    <th>Khu vực</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <div id="submitMessage" class="text-danger mt-2" style="display: none;">
+                            Vui lòng chọn ít nhất @requiredBans bàn.
+                        </div>
+                        <button type="button" id="submitBtn" class="btn btn-primary" disabled onclick="submitXepBan()">
+                            <i class="fas fa-chair"></i> Xếp bàn
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <table id="banTable" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên bàn</th>
+                                <th>Khu vực</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                }
                 <div id="paginationContainer" class="mt-3"></div>
             </div>
         </div>
@@ -98,107 +134,213 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function () {
-            let currentPageIndex = @ViewBag.PageIndex;
-            let currentPageSize = @ViewBag.PageSize;
+        // Khai báo biến và hàm toàn cục
+        window.currentDatBanId = @(datBanId.HasValue ? datBanId.Value : 0);
+        window.currentRequiredBans = @requiredBans;
 
-            // Gán hàm vào window để gọi từ HTML onclick
-            window.loadData = function (pageIndex = 1, pageSize = 5) {
-                let tenBan = $("input[name='tenBan']").val();
-                let khuVucBanId = $("select[name='khuVucBanId']").val();
+        window.loadData = function (pageIndex = 1, pageSize = 5) {
+            let tenBan = $("input[name='tenBan']").val() || '';
+            let khuVucBanId = $("select[name='khuVucBanId']").val() || '';
+            let datBanId = currentDatBanId;
+
+            $.ajax({
+                url: "/Admin/DatBan/GetPagedBanTrong",
+                type: "GET",
+                data: {
+                    pageIndex: pageIndex,
+                    pageSize: pageSize,
+                    tenBan: tenBan,
+                    khuVucBanId: khuVucBanId,
+                    datBanId: datBanId
+                },
+                success: function (response) {
+                    $("#errorMessage").hide();
+                    if (response.success) {
+                        updateTable(response.items, currentDatBanId, response.requiredBans);
+                        updatePagination(response.totalCount, response.pageIndex, response.pageSize);
+                    } else {
+                        showError(response.message || "Không thể tải dữ liệu.");
+                    }
+                },
+                error: function (xhr) {
+                    showError("Lỗi khi tải dữ liệu: " + xhr.statusText);
+                }
+            });
+        };
+
+        window.updateTable = function (items, datBanId, requiredBans) {
+            let html = '';
+            if (items.length === 0) {
+                html = `<tr><td colspan="${datBanId ? 5 : 4}" class="text-center">Không có bàn trống nào.</td></tr>`;
+            } else {
+                items.forEach(function (item) {
+                    const trangThai = item.trangThaiValue === 0 ?
+                        '<span class="badge bg-success">Trống</span>' :
+                        '<span class="badge bg-danger">Đã sử dụng</span>';
+
+                    if (datBanId) {
+                        html += `<tr>
+                                    <td>
+                                        <input type="checkbox" name="banIds" value="${item.id}"
+                                               class="ban-checkbox"
+                                               data-max="${requiredBans}"
+                                               onchange="updateSubmitButton()" />
+                                    </td>
+                                    <td>${item.id}</td>
+                                    <td>${item.tenBan || ''}</td>
+                                    <td>${item.tenKhuVucBan || 'Không có Khu vực'}</td>
+                                    <td>${trangThai}</td>
+                                </tr>`;
+                    } else {
+                        html += `<tr>
+                                    <td>${item.id}</td>
+                                    <td>${item.tenBan || ''}</td>
+                                    <td>${item.tenKhuVucBan || 'Không có Khu vực'}</td>
+                                    <td>${trangThai}</td>
+                                </tr>`;
+                    }
+                });
+            }
+            $("#banTable tbody").html(html);
+
+            // Cập nhật lại các sự kiện checkbox
+            $(".ban-checkbox").off("change").on("change", function () {
+                const maxAllowed = parseInt($(this).data("max"));
+                const checkedCount = $(".ban-checkbox:checked").length;
+
+                if (checkedCount > maxAllowed) {
+                    $(this).prop("checked", false);
+                    $("#submitMessage").text(`Chỉ được chọn tối đa ${maxAllowed} bàn`).show();
+                    setTimeout(() => {
+                        $("#submitMessage").text(`Vui lòng chọn ít nhất ${maxAllowed} bàn`)
+                            .toggle(checkedCount < maxAllowed);
+                    }, 2000);
+                }
+                updateSubmitButton();
+            });
+        };
+
+        window.updatePagination = function (totalCount, pageIndex, pageSize) {
+            let totalPages = Math.ceil(totalCount / pageSize);
+            let paginationHtml = '<nav><ul class="pagination">';
+
+            paginationHtml += `<li class="page-item ${pageIndex <= 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="loadData(${pageIndex - 1}, ${pageSize}); return false;">Trước</a>
+                    </li>`;
+
+            for (let i = 1; i <= totalPages; i++) {
+                paginationHtml += `<li class="page-item ${i === pageIndex ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="loadData(${i}, ${pageSize}); return false;">${i}</a>
+                        </li>`;
+            }
+
+            paginationHtml += `<li class="page-item ${pageIndex >= totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="loadData(${pageIndex + 1}, ${pageSize}); return false;">Sau</a>
+                    </li>`;
+
+            paginationHtml += '</ul></nav>';
+            $("#paginationContainer").html(paginationHtml);
+        };
+
+        window.showError = function (message) {
+            $("#errorMessage").text(message).show();
+            $("#banTable tbody").html(`<tr><td colspan="${currentDatBanId ? 5 : 4}" class="text-center">${message}</td></tr>`);
+        };
+
+        $(document).ready(function () {
+            // Tải dữ liệu ban đầu
+            loadData(1, 5);
+
+            // Xử lý chọn tất cả checkbox
+            window.toggleSelectAll = function () {
+                let isChecked = $("#selectAll").prop("checked");
+                let maxAllowed = currentRequiredBans;
+                let checkboxes = $(".ban-checkbox");
+
+                checkboxes.prop("checked", false);
+                if (isChecked) {
+                    checkboxes.slice(0, maxAllowed).prop("checked", true);
+                }
+                updateSubmitButton();
+            }
+
+            // Cập nhật trạng thái nút submit
+            window.updateSubmitButton = function () {
+                const required = currentRequiredBans;
+                const checkedCount = $(".ban-checkbox:checked").length;
+                const isValid = checkedCount >= required;
+
+                $("#submitBtn").prop("disabled", !isValid);
+                $("#submitMessage").toggle(!isValid && checkedCount > 0);
+            }
+
+            // Gửi AJAX để xếp bàn
+            window.submitXepBan = function () {
+                const required = currentRequiredBans;
+                const checkedCount = $(".ban-checkbox:checked").length;
+                if (checkedCount < required) {
+                    $("#submitMessage").text(`Vui lòng chọn đủ ${required} bàn.`).show();
+                    return;
+                }
+
+                const datBanId = $("#xepBanForm input[name='datBanId']").val();
+                const banIds = $(".ban-checkbox:checked").map(function () {
+                    return $(this).val();
+                }).get();
+                const token = $("#xepBanForm input[name='__RequestVerificationToken']").val();
 
                 $.ajax({
-                    url: "/Admin/DatBan/GetPagedBanTrong",
-                    type: "GET",
+                    url: "/Admin/DatBan/XepBan",
+                    type: "POST",
                     data: {
-                        pageIndex: pageIndex,
-                        pageSize: pageSize,
-                        tenBan: tenBan,
-                        khuVucBanId: khuVucBanId
+                        datBanId: datBanId,
+                        banIds: banIds,
+                        __RequestVerificationToken: token
                     },
                     success: function (response) {
                         if (response.success) {
-                            updateTable(response.items);
-                            updatePagination(response.totalCount, response.pageIndex, response.pageSize, tenBan, khuVucBanId);
-                            currentPageIndex = response.pageIndex;
-                            currentPageSize = response.pageSize;
+                            alert("Xếp bàn thành công!");
+                            window.location.href = "/Admin/DatBan/LichDatBan";
                         } else {
-                            alert(response.message);
+                            $("#submitMessage").text(response.message || "Có lỗi khi xếp bàn.").show();
                         }
                     },
-                    error: function () {
-                        alert("Không thể tải dữ liệu. Vui lòng thử lại.");
+                    error: function (xhr, status, error) {
+                        $("#submitMessage").text("Lỗi khi gửi yêu cầu: " + error).show();
                     }
                 });
             }
 
-            // Hàm tìm kiếm
+            // Xử lý khi chọn checkbox
+            $(".ban-checkbox").change(function () {
+                const maxAllowed = parseInt($(this).data("max"));
+                const checkedCount = $(".ban-checkbox:checked").length;
+
+                if (checkedCount > maxAllowed) {
+                    $(this).prop("checked", false);
+                    $("#submitMessage").text(`Chỉ được chọn tối đa ${maxAllowed} bàn`).show();
+                    setTimeout(() => {
+                        $("#submitMessage").text(`Vui lòng chọn ít nhất ${maxAllowed} bàn`)
+                            .toggle(checkedCount < maxAllowed);
+                    }, 2000);
+                }
+                updateSubmitButton();
+            });
+
+            // Tìm kiếm
             window.searchData = function () {
-                loadData(1, currentPageSize); // Reset về trang 1 khi tìm kiếm
+                loadData(1, 5);
                 hideSearchForm();
-            }
-
-            // Hàm cập nhật bảng dữ liệu
-            function updateTable(items) {
-                let html = '';
-                if (items.length === 0) {
-                    html = '<tr><td colspan="5" class="text-center">Không có bàn trống nào.</td></tr>';
-                } else {
-                    items.forEach(function (item) {
-                        html += `<tr>
-                                    <td>${item.id}</td>
-                                    <td>${item.tenBan}</td>
-                                    <td>${item.tenKhuVucBan || 'Không có Khu vực'}</td>
-                                    <td>${item.trangThaiDisplay || 'Không xác định'}</td>
-                                    <td>
-                                        <a href="@Url.Action("XepBan", "DatBan", new { area = "Admin", id = "__id__"})".replace("__id__", item.id) class="btn btn-sm btn-primary">Xếp bàn</a>
-                                    </td>
-                                </tr>`;
-                    });
-                }
-                $("#banTable tbody").html(html);
-            }
-
-            // Hàm cập nhật phân trang
-            function updatePagination(totalCount, pageIndex, pageSize, tenBan, khuVucBanId) {
-                let totalPages = Math.ceil(totalCount / pageSize);
-                let paginationHtml = '<nav><ul class="pagination">';
-
-                if (pageIndex > 1) {
-                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${pageIndex - 1}, ${pageSize}); return false;">Trước</a></li>`;
-                } else {
-                    paginationHtml += '<li class="page-item disabled"><span class="page-link">Trước</span></li>';
-                }
-
-                for (let i = 1; i <= totalPages; i++) {
-                    if (i === pageIndex) {
-                        paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
-                    } else {
-                        paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${i}, ${pageSize}); return false;">${i}</a></li>`;
-                    }
-                }
-
-                if (pageIndex < totalPages) {
-                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${pageIndex + 1}, ${pageSize}); return false;">Sau</a></li>`;
-                } else {
-                    paginationHtml += '<li class="page-item disabled"><span class="page-link">Sau</span></li>';
-                }
-
-                paginationHtml += '</ul></nav>';
-                $("#paginationContainer").html(paginationHtml);
             }
 
             // Hiển thị/Ẩn form tìm kiếm
             window.showSearchForm = function () {
-                document.getElementById('searchFormContainer').style.display = 'block';
+                $("#searchFormContainer").show();
             }
 
             window.hideSearchForm = function () {
-                document.getElementById('searchFormContainer').style.display = 'none';
+                $("#searchFormContainer").hide();
             }
-
-            // Load dữ liệu ban đầu
-            loadData(currentPageIndex, currentPageSize);
         });
     </script>
 }

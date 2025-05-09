@@ -10,11 +10,9 @@ namespace QuanLyNhaHang_DATN.ViewModels
         public string TenKhachHang { get; set; }
         public string SDT { get; set; }
 
-        // Trường để xác định có phải đặt hộ hay không
         public bool IsDatHo { get; set; }
 
-        // Chỉ bắt buộc khi IsDatHo = true 
-        //[Required(ErrorMessage = "Vui lòng nhập họ và tên")]
+       
         public string? TenLienHe { get; set; }
 
         //[Required(ErrorMessage = "Vui lòng nhập số điện thoại")]
@@ -34,6 +32,8 @@ namespace QuanLyNhaHang_DATN.ViewModels
         public LoaiDatBan Loai { get; set; }
         public TrangThaiBanDat TrangThai { get; set; }
         public string? TrangThaiDisplay { get; set; }
-        public int? BanId { get; set; }
+        //public int? BanId { get; set; }
+        public string? Bans { get; set; }
+        public string? TenNhanVien { get; set; }
     }
 }

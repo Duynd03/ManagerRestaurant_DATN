@@ -79,7 +79,7 @@
                                         <td>@item.SDTLienHe</td>
                                         <td>@item.TrangThaiDisplay</td>
                                         <td>
-                                            <a class="btn btn-sm btn-success xepBanBtn" href="@Url.Action("XepBan", "DatBan", new { area = "Admin", datBanId = item.Id })">Xếp bàn</a>
+                                            <a class="btn btn-sm btn-success xepBanBtn" href="@Url.Action("DanhSachBanTrong", "DatBan", new { area = "Admin", datBanId = item.Id })">Xếp bàn</a>
                                         </td>
                                     </tr>
                                 }
@@ -120,10 +120,14 @@
                     tenKhachHang: tenKhachHang,
                     sdt: sdt
                 }, function (response) {
-                    updateTable(response.items);
-                    updatePagination(response.totalCount, response.pageIndex, response.pageSize, tenKhachHang, sdt);
-                    currentPageIndex = pageIndex;
-                    currentPageSize = pageSize;
+                    if (response.success) {
+                        updateTable(response.items);
+                        updatePagination(response.totalCount, response.pageIndex, response.pageSize, tenKhachHang, sdt);
+                        currentPageIndex = pageIndex;
+                        currentPageSize = pageSize;
+                    } else {
+                        alert(response.message);
+                    }
                 }).fail(function () {
                     alert("Không thể tải dữ liệu. Vui lòng thử lại.");
                 });
@@ -143,19 +147,19 @@
                 } else {
                     items.forEach(function (item) {
                         html += `<tr>
-                                    <td>${item.id}</td>
-                                    <td>${item.tenKhachHang || "Khách vãng lai"}</td>
-                                    <td>${item.sdt || ""}</td>
-                                    <td>${new Date(item.thoiGianDatBan).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
-                                    <td>${item.soLuongNguoi}</td>
-                                    <td>${item.cocTien}</td>
-                                    <td>${item.tenLienHe || ""}</td>
-                                    <td>${item.sdtLienHe || ""}</td>
-                                    <td>${item.trangThaiDisplay}</td>
-                                    <td>
-                                        <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/XepBan?datBanId=${item.id}">Xếp bàn</a>
-                                    </td>
-                                </tr>`;
+                                            <td>${item.id}</td>
+                                            <td>${item.tenKhachHang || "Khách vãng lai"}</td>
+                                            <td>${item.sdt || ""}</td>
+                                            <td>${new Date(item.thoiGianDatBan).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+                                            <td>${item.soLuongNguoi}</td>
+                                            <td>${item.cocTien}</td>
+                                            <td>${item.tenLienHe || ""}</td>
+                                            <td>${item.sdtLienHe || ""}</td>
+                                            <td>${item.trangThaiDisplay}</td>
+                                            <td>
+                                                <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/DanhSachBanTrong?datBanId=${item.id}">Xếp bàn</a>
+                                            </td>
+                                        </tr>`;
                     });
                 }
                 $("#datBanList tbody").html(html);
@@ -203,24 +207,33 @@
             var connection = new signalR.HubConnectionBuilder().withUrl("/datBanHub").build();
 
             connection.on("ReceiveDatBanUpdate", function (datBan) {
-                if (datBan.trangThai === @((int)QuanLyNhaHang_DATN.Models.TrangThaiBanDat.ChoXacNhan) && datBan.banId === null) {
-                    var row = `<tr>
-                                <td>${datBan.id}</td>
-                                <td>${datBan.tenKhachHang || "Khách vãng lai"}</td>
-                                <td>${datBan.sdt || ""}</td>
-                                <td>${new Date(datBan.thoiGianDatBan).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
-                                <td>${datBan.soLuongNguoi}</td>
-                                <td>${datBan.cocTien}</td>
-                                <td>${datBan.tenLienHe || ""}</td>
-                                <td>${datBan.sdtLienHe || ""}</td>
-                                <td>Chờ xác nhận</td>
-                                <td>
-                                    <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/XepBan?datBanId=${datBan.id}">Xếp bàn</a>
-                                </td>
-                            </tr>`;
-
-                    $("#datBanList tbody").prepend(row);
-                    alert("Có yêu cầu đặt bàn mới: ID " + datBan.id);
+                // Kiểm tra trạng thái và xem có bàn nào được xếp chưa
+                if (datBan.trangThai === @((int)QuanLyNhaHang_DATN.Models.TrangThaiBanDat.ChoXacNhan)) {
+                    // Gọi API để kiểm tra danh sách bàn đã xếp
+                    $.get(`/Admin/DatBan/GetBanGhep?datBanId=${datBan.id}`, function (danhSachBanGhep) {
+                        if (!danhSachBanGhep.bans || danhSachBanGhep.bans.length === 0) {
+                            // Thêm hàng mới vào bảng nếu chưa có bàn xếp
+                            var row = `<tr>
+                                                <td>${datBan.id}</td>
+                                                <td>${datBan.tenKhachHang || "Khách vãng lai"}</td>
+                                                <td>${datBan.sdt || ""}</td>
+                                                <td>${new Date(datBan.thoiGianDatBan).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+                                                <td>${datBan.soLuongNguoi}</td>
+                                                <td>${datBan.cocTien}</td>
+                                                <td>${datBan.tenLienHe || ""}</td>
+                                                <td>${datBan.sdtLienHe || ""}</td>
+                                                <td>Chờ xác nhận</td>
+                                                <td>
+                                                    <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/DanhSachBanTrong?datBanId=${datBan.id}">Xếp bàn</a>
+                                                </td>
+                                            </tr>`;
+                            $("#datBanList tbody").prepend(row);
+                            alert("Có yêu cầu đặt bàn mới: ID " + datBan.id);
+                        }
+                    });
+                } else {
+                    // Nếu trạng thái thay đổi (không còn Chờ xác nhận), xóa hàng khỏi bảng
+                    $(`#datBanList tbody tr td:contains('${datBan.id}')`).closest('tr').remove();
                 }
             });
 
