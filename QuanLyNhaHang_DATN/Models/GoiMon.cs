@@ -19,7 +19,7 @@ namespace QuanLyNhaHang_DATN.Models
         public decimal Gia { get; set; }
 
         [StringLength(100)]
-        public string GhiChu { get; set; }
+        public string? GhiChu { get; set; }
 
         public DateTime? ThoiGianGoiMon { get; set; }
 

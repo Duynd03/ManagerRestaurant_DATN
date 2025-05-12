@@ -1,6 +1,7 @@
 ﻿using QuanLyNhaHang_DATN.Repositories.BanRepository;
 using QuanLyNhaHang_DATN.Repositories.DanhMucRepository;
 using QuanLyNhaHang_DATN.Repositories.DatBanRepository;
+using QuanLyNhaHang_DATN.Repositories.GoiMonRepository;
 using QuanLyNhaHang_DATN.Repositories.KhachHangRepository;
 using QuanLyNhaHang_DATN.Repositories.KhuVucBanRepository;
 using QuanLyNhaHang_DATN.Repositories.MonAnRepository;
@@ -9,6 +10,7 @@ using QuanLyNhaHang_DATN.Repositories.TaiKhoanRepository;
 using QuanLyNhaHang_DATN.Services.BanService;
 using QuanLyNhaHang_DATN.Services.DanhMucService;
 using QuanLyNhaHang_DATN.Services.DatBanService;
+using QuanLyNhaHang_DATN.Services.GoiMonService;
 using QuanLyNhaHang_DATN.Services.KhachHangService;
 using QuanLyNhaHang_DATN.Services.KhuVucBanService;
 using QuanLyNhaHang_DATN.Services.MonAnService;
@@ -54,6 +56,11 @@ namespace QuanLyNhaHang_DATN.Extensions
             services.AddScoped<INhanVienRepository, NhanVienRepository>();
 
             services.AddScoped<INhanVienService, NhanVienService>();
+            // Goi mon
+            services.AddScoped<IGoiMonRepository, GoiMonRepository>();
+
+            services.AddScoped<IGoiMonService, GoiMonService>();
+            
 
             return services;
             

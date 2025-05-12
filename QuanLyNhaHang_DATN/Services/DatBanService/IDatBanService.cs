@@ -19,6 +19,9 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         Task<Result<DatBan>> XepBanAsync(int datBanId, List<int> banIds, int? nhanVienId);
         Task<List<string>> GetBanGhepAsync(int datBanId);
         Task<DatBan> GetByIdWithKhachHangAsync(int id);
+
+        // 
+        IQueryable<BanSchedule> GetBanSchedules();
     }
 
 }

@@ -1,0 +1,306 @@
+﻿@model QuanLyNhaHang_DATN.Models.DatBan
+
+@{
+    ViewData["Title"] = "Gọi món";
+    Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
+}
+
+<div class="container mt-5">
+    <div class="card border-info shadow-lg" style="border-width: 2px !important;">
+        <div class="card-header text-white d-flex align-items-center justify-content-between p-3">
+            <h4 class="card-title mb-0">Lịch xếp bàn</h4>
+        </div>
+        <div class="card-body">
+            <!-- Danh sách danh mục và giỏ hàng -->
+            <div class="row">
+                <!-- Danh sách danh mục -->
+                <div class="col-md-4">
+                    <div class="card border-primary h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h3 class="mb-0">Danh sách danh mục</h3>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                @if (ViewBag.DanhMucList != null)
+                                {
+                                    foreach (var danhMuc in ViewBag.DanhMucList)
+                                    {
+                                        <button class="list-group-item list-group-item-action border-bottom py-3" onclick="loadMonAn(@danhMuc.Id)">@danhMuc.TenDanhMuc</button>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danh sách món ăn với phân trang cố định -->
+                <div class="col-md-8">
+                    <div class="card border-primary h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h3 class="mb-0">Danh sách món ăn</h3>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <div class="table-responsive flex-grow-1">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-primary">
+                                        <tr>
+                                            <th>Tên món ăn</th>
+                                            <th>Giá</th>
+                                            <th>Thêm</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="monAnTableBody">
+                                        <!-- Món ăn sẽ được load động -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Phân trang cố định -->
+                            <div id="paginationContainer" class="pagination-container mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Giỏ hàng -->
+            <div class="mt-4">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Giỏ hàng</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Tên món ăn</th>
+                                        <th>Số lượng</th>
+                                        <th>Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cartItems">
+                                    <!-- Giỏ hàng sẽ được cập nhật động -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <h4 class="text-success fw-bold text-end mt-3">Tổng tiền: <span id="totalPrice">0 VNĐ</span></h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nút điều khiển -->
+            <div class="mt-3">
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-danger shadow-sm" onclick="clearCart()">
+                        <i class="fas fa-times-circle me-1"></i> Hủy
+                    </button>
+                    <button class="btn btn-info shadow-sm" onclick="saveGoiMon()">
+                        <i class="fas fa-save me-1"></i> Lưu lại
+                    </button>
+                    <button class="btn btn-success shadow-sm" onclick="createHoaDon()">
+                        <i class="fas fa-receipt me-1"></i> Xuất hóa đơn
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let selectedMonAnList = [];
+        let currentDatBanId = @Model.Id;
+
+        // Load danh sách gọi món đã lưu khi trang được tải
+        $(document).ready(function () {
+            // Sử dụng JSON.parse để đảm bảo dữ liệu được tuần tự hóa đúng
+            const goiMonList = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.GoiMonList ?? new List<QuanLyNhaHang_DATN.ViewModels.GoiMonViewModel>()))');
+            selectedMonAnList = goiMonList || [];
+            updateCart();
+        });
+
+        // Load món ăn theo danh mục với phân trang
+        window.loadMonAn = function (danhMucId, pageIndex = 1, pageSize = 5) {
+            $.ajax({
+                url: "/Admin/GoiMon/GetMonAnByDanhMuc",
+                type: "GET",
+                data: { danhMucId: danhMucId, pageIndex: pageIndex, pageSize: pageSize },
+                success: function (response) {
+                    if (response.success) {
+                        let tbody = $("#monAnTableBody");
+                        tbody.empty();
+                        if (response.items.length === 0) {
+                            tbody.append(`<tr><td colspan="3" class="text-center text-muted">Không có món ăn nào</td></tr>`);
+                        } else {
+                            response.items.forEach(item => {
+                                tbody.append(`
+                                            <tr>
+                                                <td>${item.tenMonAn}</td>
+                                                <td>${item.gia.toLocaleString()} VNĐ</td>
+                                                <td><button class="btn btn-success btn-sm" onclick="addToCart(${item.id}, '${item.tenMonAn}', ${item.gia})">+</button></td>
+                                            </tr>
+                                        `);
+                            });
+                        }
+                        updatePagination(danhMucId, response.totalCount, response.pageIndex, response.pageSize);
+                    } else {
+                        alert("Không tìm thấy món ăn.");
+                    }
+                },
+                error: function (xhr) {
+                    alert("Lỗi khi tải món ăn: " + xhr.statusText);
+                }
+            });
+        };
+
+        // Hàm cập nhật phân trang cố định
+        function updatePagination(danhMucId, totalCount, pageIndex, pageSize) {
+            let totalPages = Math.ceil(totalCount / pageSize);
+            let paginationHtml = '<nav><ul class="pagination justify-content-center">';
+
+            if (pageIndex > 1) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadMonAn(${danhMucId}, ${pageIndex - 1}, ${pageSize}); return false;">Trước</a></li>`;
+            } else {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">Trước</span></li>';
+            }
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === pageIndex) {
+                    paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                } else {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadMonAn(${danhMucId}, ${i}, ${pageSize}); return false;">${i}</a></li>`;
+                }
+            }
+
+            if (pageIndex < totalPages) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadMonAn(${danhMucId}, ${pageIndex + 1}, ${pageSize}); return false;">Sau</a></li>`;
+            } else {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">Sau</span></li>';
+            }
+
+            paginationHtml += '</ul></nav>';
+            $("#paginationContainer").html(paginationHtml);
+        }
+
+        // Thêm món vào giỏ hàng
+        window.addToCart = function (id, tenMonAn, gia) {
+            let existingItem = selectedMonAnList.find(item => item.MonAnId === id);
+            if (existingItem) {
+                existingItem.SoLuong += 1;
+            } else {
+                selectedMonAnList.push({ MonAnId: id, TenMonAn: tenMonAn, Gia: gia, SoLuong: 1 });
+            }
+            updateCart();
+        };
+
+        // Xóa món khỏi giỏ hàng
+        window.removeFromCart = function (id) {
+            let item = selectedMonAnList.find(item => item.MonAnId === id);
+            if (item) {
+                item.SoLuong -= 1;
+                if (item.SoLuong <= 0) {
+                    selectedMonAnList = selectedMonAnList.filter(item => item.MonAnId !== id);
+                }
+            }
+            updateCart();
+        };
+
+        // Cập nhật giỏ hàng trên giao diện
+        window.updateCart = function () {
+            let tbody = $("#cartItems");
+            tbody.empty();
+
+            let total = 0;
+            selectedMonAnList.forEach(item => {
+                // Đảm bảo các giá trị hợp lệ
+                const tenMonAn = item.TenMonAn || "Món không xác định";
+                const soLuong = Number(item.SoLuong) || 1;
+                const gia = Number(item.Gia) || 0;
+
+                let thanhTien = gia * soLuong;
+                total += thanhTien;
+
+                tbody.append(`
+                            <tr>
+                                <td>${tenMonAn}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" onclick="removeFromCart(${item.MonAnId})">-</button>
+                                    ${soLuong}
+                                    <button class="btn btn-sm btn-success" onclick="addToCart(${item.MonAnId}, '${tenMonAn}', ${gia})">+</button>
+                                </td>
+                                <td>${thanhTien.toLocaleString()} VNĐ</td>
+                            </tr>
+                        `);
+            });
+
+            $("#totalPrice").text(total.toLocaleString() + " VNĐ");
+        };
+
+        // Lưu danh sách gọi món
+        window.saveGoiMon = function () {
+            if (selectedMonAnList.length === 0) {
+                alert("Vui lòng chọn ít nhất một món ăn!");
+                return;
+            }
+
+            // Chuẩn hóa dữ liệu trước khi gửi
+            const goiMonViewModels = selectedMonAnList.map(item => ({
+                MonAnId: item.MonAnId,
+                SoLuong: Number(item.SoLuong) || 1,
+                Gia: Number(item.Gia) || 0
+            }));
+
+            $.ajax({
+                url: "/Admin/GoiMon/SaveGoiMon",
+                type: "POST",
+                data: JSON.stringify({
+                    datBanId: currentDatBanId,
+                    goiMonViewModels: goiMonViewModels
+                }),
+                contentType: "application/json",
+                success: function (response) {
+                    if (response.success) {
+                        alert(response.message);
+                        window.location.reload();
+                    } else {
+                        alert(response.message || "Có lỗi khi lưu gọi món.");
+                    }
+                },
+                error: function (xhr) {
+                    alert("Lỗi khi gửi yêu cầu: " + xhr.statusText);
+                }
+            });
+        };
+
+        // Xóa danh sách gọi món (hủy)
+        window.clearCart = function () {
+            selectedMonAnList = [];
+            updateCart();
+        };
+
+        // Xuất hóa đơn
+        window.createHoaDon = function () {
+            if (selectedMonAnList.length === 0) {
+                alert("Vui lòng chọn ít nhất một món ăn!");
+                return;
+            }
+
+            $.ajax({
+                url: "/Admin/GoiMon/CreateHoaDon",
+                type: "POST",
+                data: JSON.stringify({ datBanId: currentDatBanId }),
+                contentType: "application/json",
+                success: function (response) {
+                    if (response.success) {
+                        alert(response.message);
+                        window.location.href = "/Admin/HoaDon/Index";
+                    } else {
+                        alert(response.message || "Có lỗi khi tạo hóa đơn.");
+                    }
+                },
+                error: function (xhr) {
+                    alert("Lỗi khi gửi yêu cầu: " + xhr.statusText);
+                }
+            });
+        };
+    </script>
+}

@@ -1,4 +1,5 @@
-﻿using QuanLyNhaHang_DATN.Data;
+﻿
+using QuanLyNhaHang_DATN.Data;
 using QuanLyNhaHang_DATN.Models;
 using QuanLyNhaHang_DATN.Repositories;
 using QuanLyNhaHang_DATN.Repositories.DatBanRepository;
@@ -20,6 +21,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         private readonly IBanRepository _banRepository;
         private readonly INhanVienRepository _nhanVienRepository;
         private const int MaxSoGhe = 6; // Số ghế tối đa mỗi bàn (4 hoặc 6)
+        private const double DefaultDurationHours = 2.0; // Thời gian mặc định là 2 giờ
         public DatBanService(
             IDatBanRepository datBanRepository,
             IKhachHangService khachHangService,
@@ -184,109 +186,113 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
 
             return (items, total);
         }
-        //public async Task<Result<DatBan>> XepBanAsync(int datBanId, List<int> banIds, int? nhanVienId)
-        //{
-        //    var errors = new List<string>();
 
-        //    var datBan = await GetByIdAsync(datBanId);
-        //    if (datBan == null)
-        //        return new Result<DatBan>(false, "Đặt bàn không tồn tại.", null, new List<string> { "Đặt bàn không tồn tại." });
-
-        //    if (datBan.TrangThai != TrangThaiBanDat.ChoXacNhan)
-        //        return new Result<DatBan>(false, "Đặt bàn không ở trạng thái chờ xác nhận.", null);
-
-        //    var bans = new List<Ban>();
-        //    foreach (var banId in banIds)
-        //    {
-        //        var ban = await GetBanByIdAsync(banId);
-        //        if (ban == null || ban.TrangThai != TrangThaiBan.Trong)
-        //            errors.Add($"Bàn {banId} không tồn tại hoặc không trống.");
-        //        else
-        //            bans.Add(ban);
-        //    }
-
-        //    var requiredBans = (int)Math.Ceiling((double)datBan.SoLuongNguoi / MaxSoGhe);
-        //    if (bans.Count < requiredBans)
-        //        errors.Add($"Đơn đặt bàn cần {requiredBans} bàn cho {datBan.SoLuongNguoi} người. Bạn đã chọn {bans.Count} bàn.");
-
-        //    foreach (var ban in bans)
-        //    {
-        //        if (await HasTimeConflictAsync(ban.Id, datBan.ThoiGianDatBan))
-        //            errors.Add($"Bàn {ban.TenBan} đã được đặt trong khoảng thời gian này.");
-        //    }
-
-        //    if (errors.Any())
-        //        return new Result<DatBan>(false, "Có lỗi khi xếp bàn.", datBan, errors);
-
-        //    datBan.TrangThai = TrangThaiBanDat.DaXacNhan;
-        //    datBan.NhanVienId = nhanVienId;
-
-        //    foreach (var ban in bans)
-        //    {
-        //        await AddDatBanBanAsync(new DatBan_Ban
-        //        {
-        //            DatBanId = datBanId,
-        //            BanId = ban.Id
-        //        });
-
-        //        ban.TrangThai = TrangThaiBan.DaDatTruoc;
-        //        await UpdateBanAsync(ban);
-        //    }
-
-        //    await UpdateAsync(datBan);
-        //    return new Result<DatBan>(true, "Xếp bàn thành công.", datBan);
-        //}
         public async Task<Result<DatBan>> XepBanAsync(int datBanId, List<int> banIds, int? nhanVienId)
         {
-            var errors = new List<string>();
-            var datBan = await GetByIdWithKhachHangAsync(datBanId); // Sửa từ GetByIdAsync thành GetByIdWithKhachHangAsync
-            if (datBan == null)
-                return new Result<DatBan>(false, "Đặt bàn không tồn tại.", null, new List<string> { "Đặt bàn không tồn tại." });
-
-            if (datBan.TrangThai != TrangThaiBanDat.ChoXacNhan)
-                return new Result<DatBan>(false, "Đặt bàn không ở trạng thái chờ xác nhận.", null);
-
-            var bans = new List<Ban>();
-            foreach (var banId in banIds)
+            using (var transaction = await _context.Database.BeginTransactionAsync())
             {
-                var ban = await _banRepository.GetByIdAsync(banId);
-                if (ban == null || ban.TrangThai != TrangThaiBan.Trong)
-                    errors.Add($"Bàn {banId} không tồn tại hoặc không trống.");
-                else
-                    bans.Add(ban);
-            }
-
-            var requiredBans = (int)Math.Ceiling((double)datBan.SoLuongNguoi / 6);
-            if (bans.Count < requiredBans)
-                errors.Add($"Đơn đặt bàn cần {requiredBans} bàn cho {datBan.SoLuongNguoi} người. Bạn đã chọn {bans.Count} bàn.");
-
-            foreach (var ban in bans)
-            {
-                if (await HasTimeConflictAsync(ban.Id, datBan.ThoiGianDatBan))
-                    errors.Add($"Bàn {ban.TenBan} đã được đặt trong khoảng thời gian này.");
-            }
-
-            if (errors.Any())
-                return new Result<DatBan>(false, "Có lỗi khi xếp bàn.", datBan, errors);
-
-            datBan.TrangThai = TrangThaiBanDat.DaXacNhan;
-            datBan.NhanVienId = nhanVienId;
-
-            foreach (var ban in bans)
-            {
-                await AddDatBanBanAsync(new DatBan_Ban
+                try
                 {
-                    DatBanId = datBanId,
-                    BanId = ban.Id
-                });
+                    var errors = new List<string>();
+                    var datBan = await GetByIdWithKhachHangAsync(datBanId);
+                    if (datBan == null)
+                        return new Result<DatBan>(false, "Đặt bàn không tồn tại.", null, new List<string> { "Đặt bàn không tồn tại." });
 
-                ban.TrangThai = TrangThaiBan.DaDatTruoc;
-                await _banRepository.UpdateAsync(ban);
+                    if (datBan.TrangThai != TrangThaiBanDat.ChoXacNhan)
+                        return new Result<DatBan>(false, "Đặt bàn không ở trạng thái chờ xác nhận.", null);
+
+                    var bans = new List<Ban>();
+                    foreach (var banId in banIds)
+                    {
+                        var ban = await _banRepository.GetByIdAsync(banId);
+                        if (ban == null)
+                            errors.Add($"Bàn {banId} không tồn tại.");
+                        else
+                            bans.Add(ban);
+                    }
+
+                    var requiredBans = (int)Math.Ceiling((double)datBan.SoLuongNguoi / MaxSoGhe);
+                    if (bans.Count < requiredBans)
+                        errors.Add($"Đơn đặt bàn cần {requiredBans} bàn cho {datBan.SoLuongNguoi} người. Bạn đã chọn {bans.Count} bàn.");
+
+                    const double minimumTimeGapHours = 3.0;
+                    const double bufferTimeMinutes = 30;
+                    const double defaultDurationHours = 2.0;
+
+                    var thoiGianDuKienKetThuc = datBan.ThoiGianDatBan.AddHours(defaultDurationHours);
+
+                    var banIdsList = bans.Select(b => b.Id).ToList();
+                    var existingSchedules = await _context.BanSchedules
+                        .Where(bs => banIdsList.Contains(bs.BanId) && bs.DatBanId != datBanId)
+                        .Where(bs => bs.TrangThai == TrangThaiBan.DaDatTruoc)
+                        .ToListAsync();
+
+                    foreach (var ban in bans)
+                    {
+                        var schedulesForBan = existingSchedules.Where(bs => bs.BanId == ban.Id);
+                        foreach (var schedule in schedulesForBan)
+                        {
+                            var existingStart = schedule.ThoiGianBatDau;
+                            var existingEnd = existingStart.AddHours(defaultDurationHours).AddMinutes(bufferTimeMinutes);
+
+                            var newStart = datBan.ThoiGianDatBan;
+                            var newEnd = thoiGianDuKienKetThuc;
+
+                            if (newStart < existingEnd && newEnd > existingStart)
+                                errors.Add($"Bàn {ban.TenBan} đã được đặt vào khoảng thời gian này.");
+
+                            var timeDifference = Math.Abs((newStart - existingStart).TotalHours);
+                            if (timeDifference < minimumTimeGapHours)
+                                errors.Add($"Bàn {ban.TenBan} đã được đặt vào thời gian gần ({existingStart}). Vui lòng chọn thời gian cách ít nhất {minimumTimeGapHours} tiếng.");
+                        }
+                    }
+
+                    if (errors.Any())
+                        return new Result<DatBan>(false, "Có lỗi khi xếp bàn.", datBan, errors);
+
+                    datBan.TrangThai = TrangThaiBanDat.DaXacNhan;
+                    datBan.NhanVienId = nhanVienId;
+
+                    foreach (var ban in bans)
+                    {
+                        await AddDatBanBanAsync(new DatBan_Ban
+                        {
+                            DatBanId = datBanId,
+                            BanId = ban.Id
+                        });
+
+                        _context.BanSchedules.Add(new BanSchedule
+                        {
+                            BanId = ban.Id,
+                            DatBanId = datBanId,
+                            ThoiGianBatDau = datBan.ThoiGianDatBan,
+                            ThoiGianKetThuc = datBan.ThoiGianDatBan.AddHours(defaultDurationHours), // Lưu ThoiGianKetThuc
+                            TrangThai = TrangThaiBan.DaDatTruoc,
+                            NgayTao = DateTime.Now
+                        });
+
+                        ban.TrangThai = TrangThaiBan.DaDatTruoc; // Có thể bỏ nếu không cần trạng thái tĩnh
+                        await _banRepository.UpdateAsync(ban);
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await UpdateAsync(datBan);
+                    await transaction.CommitAsync();
+
+                    return new Result<DatBan>(true, "Xếp bàn thành công.", datBan);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return new Result<DatBan>(false, $"Lỗi khi xếp bàn: {ex.Message}", null);
+                }
             }
+        }
 
-            await UpdateAsync(datBan);
-
-            return new Result<DatBan>(true, "Xếp bàn thành công.", datBan);
+        // Thêm phương thức để truy vấn BanSchedules
+        public IQueryable<BanSchedule> GetBanSchedules()
+        {
+            return _context.BanSchedules.AsQueryable();
         }
         public async Task AddDatBanBanAsync(DatBan_Ban datBanBan)
         {

@@ -59,6 +59,7 @@
                             <th>SDT liên hệ</th>
                             <th>Nhân viên xử lý</th>
                             <th>Trạng thái</th>
+                            <th>Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -85,6 +86,9 @@
                                    @*  <td>@item.TrangThaiDisplay</td> *@
                                     <td>
                                         <span class="badge bg-info">@item.TrangThaiDisplay</span>
+                                    </td>
+                                    <td>
+                                        <a href="/Admin/GoiMon/Index?datBanId=@item.Id" class="btn btn-primary btn-sm">Gọi món</a>
                                     </td>
                                 </tr>
                             }
@@ -153,6 +157,7 @@
                                             <td>${item.sdtLienHe || ''}</td>
                                             <td>${item.tenNhanVien || ''}</td>
                                             <td><span class="badge bg-info">${item.trangThaiDisplay}</span></td>
+                                            <td><a href="/Admin/GoiMon/Index?datBanId=${item.id}" class="btn btn-primary btn-sm">Gọi món</a></td>
                                         </tr>`;
                     });
                 }

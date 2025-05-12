@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuanLyNhaHang_DATN.Data;
 
@@ -11,9 +12,11 @@ using QuanLyNhaHang_DATN.Data;
 namespace QuanLyNhaHang_DATN.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250512103416_Update_GoiMon_for_GhiChu")]
+    partial class Update_GoiMon_for_GhiChu
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -445,8 +448,8 @@ namespace QuanLyNhaHang_DATN.Migrations
                     b.Property<int>("DanhMucId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("Gia")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<double>("Gia")
+                        .HasColumnType("float");
 
                     b.Property<string>("HinhAnh")
                         .HasColumnType("nvarchar(max)");

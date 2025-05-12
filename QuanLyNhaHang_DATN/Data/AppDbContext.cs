@@ -25,6 +25,7 @@ namespace QuanLyNhaHang_DATN.Data
         public DbSet<HoaDon> HoaDons { get; set; }
         public DbSet<GoiMon> GoiMons { get; set; }
         public DbSet<DatBan_Ban> DatBan_Bans { get; set; }
+        public DbSet<BanSchedule> BanSchedules { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -47,7 +48,7 @@ namespace QuanLyNhaHang_DATN.Data
             builder.Entity<HoaDon>().ToTable("HoaDon");
             builder.Entity<GoiMon>().ToTable("GoiMon");
             builder.Entity<DatBan_Ban>().ToTable("DatBan_Ban");
-
+            builder.Entity<BanSchedule>().ToTable("BanSchedule");
             // Cấu hình khóa chính composite cho DatBan_Ban
             builder.Entity<DatBan_Ban>()
                 .HasKey(db => new { db.DatBanId, db.BanId });

@@ -11,7 +11,7 @@ namespace QuanLyNhaHang_DATN.Models
         [Required(ErrorMessage = "Tên món ăn là bắt buộc")]
         public string TenMonAn { get; set; }
         [Required(ErrorMessage = "Giá món ăn là bắt buộc")]
-        public double Gia { get; set; }
+        public decimal Gia { get; set; }
         public string? MoTa { get; set; }
 
         //[Required(ErrorMessage = "Hình ảnh là bắt buộc")]

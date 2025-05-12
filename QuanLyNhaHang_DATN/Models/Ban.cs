@@ -32,6 +32,8 @@ namespace QuanLyNhaHang_DATN.Models
         [Display(Name = "Đã đặt trước")]
         DaDatTruoc = 1,
         [Display(Name = "Đang sử dụng")]
-        DangSuDung = 2
+        DangSuDung = 2,
+        [Display(Name = "Đã hủy")]
+        Huy = 3
     }
 }
