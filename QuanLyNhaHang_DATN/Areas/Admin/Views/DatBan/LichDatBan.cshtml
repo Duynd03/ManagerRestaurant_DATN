@@ -8,7 +8,7 @@
     <div class="card">
         <div class="card-header">
             <div class="d-flex align-items-center">
-                <h4 class="card-title me-auto">Lịch xếp bàn </h4>
+                <h4 class="card-title me-auto">Lịch xếp bàn</h4>
                 <button id="btnSearch" class="btn btn-secondary btn-round me-2" onclick="showSearchForm()">
                     <i class="fa fa-search"></i> Tìm kiếm
                 </button>
@@ -27,11 +27,11 @@
             <form id="searchForm">
                 <div class="mb-3">
                     <label for="tenKhachHang" class="form-label">Tên khách hàng</label>
-                    <input type="text" name="tenKhachHang" class="form-control" placeholder="Nhập tên khách hàng" />
+                    <input type="text" name="tenKhachHang" class="form-control" placeholder="Nhập tên khách hàng" value="@ViewBag.SearchTenKhachHang" />
                 </div>
                 <div class="mb-3">
                     <label for="sdt" class="form-label">Số điện thoại</label>
-                    <input type="text" name="sdt" class="form-control" placeholder="Nhập số điện thoại" />
+                    <input type="text" name="sdt" class="form-control" placeholder="Nhập số điện thoại" value="@ViewBag.SearchSDT" />
                 </div>
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-primary" onclick="searchData()">
@@ -66,7 +66,7 @@
                         @if (!Model.Any())
                         {
                             <tr>
-                                <td colspan="10" class="text-center">Hiện tại không có lịch xếp bàn nào</td>
+                                <td colspan="11" class="text-center">Hiện tại không có lịch xếp bàn nào</td>
                             </tr>
                         }
                         else
@@ -83,12 +83,14 @@
                                     <td>@item.TenLienHe</td>
                                     <td>@item.SDTLienHe</td>
                                     <td>@(item.TenNhanVien ?? " ")</td>
-                                   @*  <td>@item.TrangThaiDisplay</td> *@
                                     <td>
                                         <span class="badge bg-info">@item.TrangThaiDisplay</span>
                                     </td>
                                     <td>
                                         <a href="/Admin/GoiMon/Index?datBanId=@item.Id" class="btn btn-primary btn-sm">Gọi món</a>
+                                        <!-- Chuyển hướng trực tiếp đến DanhSachBanTrong với isChuyenBan=true -->
+                                        <a href="/Admin/DatBan/DanhSachBanTrong?datBanId=@item.Id&isChuyenBan=true" class="btn btn-warning btn-sm">Chuyển bàn</a>
+                                        <button class="btn btn-danger btn-sm btn-huy-ban" data-id="@item.Id">Hủy</button>
                                     </td>
                                 </tr>
                             }
@@ -143,7 +145,7 @@
             function updateTable(items) {
                 let html = '';
                 if (items.length === 0) {
-                    html = '<tr><td colspan="7" class="text-center">Không có lịch sử xếp bàn.</td></tr>';
+                    html = '<tr><td colspan="11" class="text-center">Không có lịch sử xếp bàn.</td></tr>';
                 } else {
                     items.forEach(function (item) {
                         html += `<tr>
@@ -157,11 +159,41 @@
                                             <td>${item.sdtLienHe || ''}</td>
                                             <td>${item.tenNhanVien || ''}</td>
                                             <td><span class="badge bg-info">${item.trangThaiDisplay}</span></td>
-                                            <td><a href="/Admin/GoiMon/Index?datBanId=${item.id}" class="btn btn-primary btn-sm">Gọi món</a></td>
+                                            <td>
+                                                <a href="/Admin/GoiMon/Index?datBanId=${item.id}" class="btn btn-primary btn-sm">Gọi món</a>
+                                                <a href="/Admin/DatBan/DanhSachBanTrong?datBanId=${item.id}&isChuyenBan=true" class="btn btn-warning btn-sm">Chuyển bàn</a>
+                                                <button class="btn btn-danger btn-sm btn-huy-ban" data-id="${item.id}">Hủy</button>
+                                            </td>
                                         </tr>`;
                     });
                 }
                 $("#xepBanTable tbody").html(html);
+
+                // Thêm sự kiện click cho nút Hủy
+                $('.btn-huy-ban').off('click').on('click', function () {
+                    var datBanId = $(this).data('id');
+                    if (confirm('Bạn có chắc muốn hủy đơn đặt bàn này?')) {
+                        $.ajax({
+                            url: '/Admin/DatBan/HuyBan',
+                            type: 'POST',
+                            data: { datBanId: datBanId },
+                            headers: {
+                                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                            },
+                            success: function (response) {
+                                if (response.success) {
+                                    alert(response.message);
+                                    loadData();
+                                } else {
+                                    alert(response.message);
+                                }
+                            },
+                            error: function () {
+                                alert('Có lỗi xảy ra khi hủy bàn.');
+                            }
+                        });
+                    }
+                });
             }
 
             // Hàm cập nhật phân trang

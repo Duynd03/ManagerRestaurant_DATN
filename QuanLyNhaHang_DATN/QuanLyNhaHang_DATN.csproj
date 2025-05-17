@@ -8,9 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Repositories\PaymentRepository\" />
     <Folder Include="Services\Extensions\" />
-    <Folder Include="Services\PaymentService\" />
     <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 

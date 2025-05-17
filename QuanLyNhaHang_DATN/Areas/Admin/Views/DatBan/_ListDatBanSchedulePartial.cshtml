@@ -1,0 +1,48 @@
+﻿<div class="modal fade" id="scheduleModal" tabindex="-1" aria-labelledby="scheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="scheduleModalLabel">Lịch Đặt Bàn</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="scheduleModalBody">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên khách hàng</th>
+                                <th>Số điện thoại</th>
+                                <th>Thời gian đặt</th>
+                                <th>Số lượng khách</th>
+                                <th>Bàn ghép</th>
+                                <th>Nhân viên xử lý</th>
+                                <th>Ghi chú</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #scheduleModal .modal-body {
+        max-height: 70vh; /* Giới hạn chiều cao tối đa của modal-body */
+        overflow-y: auto; /* Thêm thanh cuộn dọc */
+    }
+
+    #scheduleModal .table th,
+    #scheduleModal .table td {
+        white-space: nowrap; /* Ngăn xuống dòng trong ô */
+    }
+
+    #scheduleModal .table-responsive {
+        overflow-x: auto; /* Thêm thanh cuộn ngang nếu cần */
+    }
+</style>

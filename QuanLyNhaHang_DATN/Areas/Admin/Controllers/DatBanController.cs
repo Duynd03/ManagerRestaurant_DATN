@@ -33,13 +33,14 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
             _khuVucBanService = khuVucBanService;
             _hubContext = hubContext;
         }
-        public async Task<IActionResult> DanhSachBanTrong(int pageIndex = 1, int pageSize = 5, string? tenBan = null, int? khuVucBanId = null, int? datBanId = null)
+        public async Task<IActionResult> DanhSachBanTrong(int pageIndex = 1, int pageSize = 5, string? tenBan = null, int? khuVucBanId = null, int? datBanId = null, bool isChuyenBan = false)
         {
             try
             {
-                // Lấy IdNhanVien từ Claims
                 var nhanVienId = User.Claims.FirstOrDefault(c => c.Type == "NhanVienId")?.Value;
                 ViewBag.NhanVienId = string.IsNullOrEmpty(nhanVienId) ? 0 : int.Parse(nhanVienId);
+                // Thêm ViewBag.IsChuyenBan để view biết đang ở chế độ Chuyển bàn hay Xếp bàn
+                ViewBag.IsChuyenBan = isChuyenBan;
 
                 var khuVucBans = await _khuVucBanService.GetAllAsync();
                 ViewBag.KhuVucBanList = khuVucBans;
@@ -50,14 +51,22 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 if (datBanId.HasValue)
                 {
                     var datBan = await _datBanService.GetByIdWithKhachHangAsync(datBanId.Value);
-                    if (datBan != null)
+                    if (datBan == null)
                     {
-                        ViewBag.DatBanInfo = $"Đơn đặt bàn cho {datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai"} (ID: {datBanId})";
-                        ViewBag.RequiredBans = (int)Math.Ceiling((double)datBan.SoLuongNguoi / 6);
+                        TempData["Error"] = "Đơn đặt bàn không tồn tại.";
+                        return View(new List<Ban>());
+                    }
+
+                    ViewBag.DatBanInfo = $"Đơn đặt bàn cho {datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai"} (ID: {datBanId})";
+                    ViewBag.RequiredBans = (int)Math.Ceiling((double)datBan.SoLuongNguoi / 6);
+
+                    // Nếu là Chuyển bàn, lấy danh sách bàn hiện tại của đơn để hiển thị
+                    if (isChuyenBan)
+                    {
+                        ViewBag.CurrentBans = await _datBanService.GetBanGhepAsync(datBanId.Value);
                     }
                 }
 
-                // Trả về view với danh sách rỗng, dữ liệu sẽ được tải qua AJAX
                 return View(new List<Ban>());
             }
             catch (Exception ex)
@@ -66,56 +75,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 return View(new List<Ban>());
             }
         }
-        //public async Task<IActionResult> GetPagedBanTrong(int pageIndex = 1, int pageSize = 5, string? tenBan = null, int? khuVucBanId = null, int? datBanId = null)
-        //{
-        //    try
-        //    {
-        //        var filter = new BanFilterModel
-        //        {
-        //            TenBan = tenBan,
-        //            KhuVucBanId = khuVucBanId,
-        //            TrangThai = (int)TrangThaiBan.Trong
-        //        };
 
-        //        var (items, totalCount) = await _banService.GetPagedAsync(pageIndex, pageSize, filter);
-        //        int requiredBans = 1;
-        //        if (datBanId.HasValue)
-        //        {
-        //            var datBan = await _datBanService.GetByIdWithKhachHangAsync(datBanId.Value); // Sửa từ GetByIdAsync
-        //            if (datBan != null)
-        //            {
-        //                requiredBans = (int)Math.Ceiling((double)datBan.SoLuongNguoi / 6);
-        //            }
-        //        }
-
-        //        var result = items.Select(item => new
-        //        {
-        //            Id = item.Id,
-        //            TenBan = item.TenBan,
-        //            TenKhuVucBan = item.KhuVucBan?.TenKhuVuc,
-        //            TrangThaiDisplay = GetEnumDisplayName(item.TrangThai),
-        //            TrangThaiValue = (int)item.TrangThai
-        //        });
-
-        //        return Json(new
-        //        {
-        //            success = true,
-        //            items = result,
-        //            totalCount,
-        //            pageIndex,
-        //            pageSize,
-        //            requiredBans
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return Json(new
-        //        {
-        //            success = false,
-        //            message = $"Lỗi khi tải dữ liệu: {ex.Message}"
-        //        });
-        //    }
-        //}
 
         public async Task<IActionResult> DanhSachKhachHangChoXepBan(int pageIndex = 1, int pageSize = 5, string tenKhachHang = null, string sdt = null)
         {
@@ -377,19 +337,14 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
             try
             {
                 const double defaultDurationHours = 2.0;
-                const double bufferTimeMinutes = 30;
-                const double minimumTimeGapHours = 3.0;
 
                 DateTime? thoiGianDatBan = null;
-                DateTime? thoiGianDuKienKetThuc = null;
-
                 if (datBanId.HasValue)
                 {
                     var datBan = await _datBanService.GetByIdWithKhachHangAsync(datBanId.Value);
                     if (datBan != null)
                     {
                         thoiGianDatBan = datBan.ThoiGianDatBan;
-                        thoiGianDuKienKetThuc = thoiGianDatBan?.AddHours(defaultDurationHours);
                     }
                 }
 
@@ -400,7 +355,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     .Include(bs => bs.DatBan)
                         .ThenInclude(db => db.NhanVien)
                     .Include(bs => bs.DatBan)
-                        .ThenInclude(db => db.DatBanBans) // Thêm Include cho DatBan_Ban
+                        .ThenInclude(db => db.DatBanBans)
                     .Where(bs => bs.BanId == banId
                         && bs.TrangThai == TrangThaiBan.DaDatTruoc
                         && bs.DatBan.TrangThai == TrangThaiBanDat.DaXacNhan
@@ -408,29 +363,18 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     .OrderBy(bs => bs.ThoiGianBatDau)
                     .ToListAsync();
 
-                var schedules = banSchedules.Select(bs =>
+                var schedules = banSchedules.Select(bs => new
                 {
-                    var isConflict = false;
-
-                    if (thoiGianDatBan.HasValue && thoiGianDuKienKetThuc.HasValue)
-                    {
-                        var existingEnd = bs.ThoiGianBatDau.AddHours(defaultDurationHours).AddMinutes(bufferTimeMinutes);
-                        var timeDifference = Math.Abs((thoiGianDatBan.Value - bs.ThoiGianBatDau).TotalHours);
-
-                        isConflict = (thoiGianDatBan < existingEnd && thoiGianDuKienKetThuc > bs.ThoiGianBatDau) ||
-                                     (timeDifference < minimumTimeGapHours);
-                    }
-
-                    return new
-                    {
-                        DatBanId = bs.DatBanId,
-                        TenKhachHang = bs.DatBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
-                        ThoiGianBatDau = bs.ThoiGianBatDau.ToString("HH:mm dd/MM/yyyy"),
-                        SoLuongNguoi = bs.DatBan.SoLuongNguoi,
-                        TenNhanVien = bs.DatBan.NhanVien?.TenNhanVien ?? "Chưa có nhân viên",
-                        IsConflict = isConflict,
-                        GhiepTuDong = bs.DatBan.DatBanBans.Count > 1 // Sửa thành DatBanBans
-                    };
+                    DatBanId = bs.DatBanId,
+                    TenKhachHang = bs.DatBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                    SoDienThoai = bs.DatBan.KhachHang?.SDT ?? string.Empty,
+                    ThoiGianDatBan = bs.ThoiGianBatDau.ToString("HH:mm dd/MM/yyyy"),
+                    SoLuongKhach = bs.DatBan.SoLuongNguoi,
+                    BanGhep = bs.DatBan.DatBanBans.Any()
+                        ? string.Join(", ", bs.DatBan.DatBanBans.Select(dbb => dbb.Ban.TenBan))
+                        : "Chưa xếp",
+                    NhanVienXuLy = bs.DatBan.NhanVien?.TenNhanVien ?? "Chưa có nhân viên",
+                    GhiChu = bs.DatBan.GhiChu ?? "Không có"
                 }).ToList();
 
                 return Json(new
@@ -444,6 +388,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 return Json(new { success = false, message = $"Lỗi khi tải lịch sử: {ex.Message}" });
             }
         }
+
         public async Task<IActionResult> GetPagedBanTrong(int pageIndex = 1, int pageSize = 5, string? tenBan = null, int? khuVucBanId = null, int? datBanId = null)
         {
             try
@@ -451,72 +396,56 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 var filter = new BanFilterModel
                 {
                     TenBan = tenBan,
-                    KhuVucBanId = khuVucBanId,
-                    // Bỏ TrangThai vì không còn phụ thuộc vào trạng thái tĩnh
+                    KhuVucBanId = khuVucBanId
                 };
 
                 var (items, totalCount) = await _banService.GetPagedAsync(pageIndex, pageSize, filter);
                 var itemsList = items.ToList();
 
-                int requiredBans = 1;
-                var scheduledInfoDict = new Dictionary<int, object>();
+                int soBanCanThiet = 1;
+                var khaDungBan = new Dictionary<int, KhaDungBanViewModel>();
 
                 if (datBanId.HasValue)
                 {
                     var datBan = await _datBanService.GetByIdWithKhachHangAsync(datBanId.Value);
                     if (datBan == null)
+                    {
                         return Json(new { success = false, message = "Đặt bàn không tồn tại." });
+                    }
 
-                    requiredBans = (int)Math.Ceiling((double)datBan.SoLuongNguoi / 6);
+                    soBanCanThiet = (int)Math.Ceiling((double)datBan.SoLuongNguoi / 6);
+                    var thoiGianKetThucDuKien = datBan.ThoiGianDatBan.AddHours(2.0);
 
-                    const double defaultDurationHours = 2.0;
-                    const double bufferTimeMinutes = 30;
-                    const double minimumTimeGapHours = 3.0;
-                    var thoiGianDuKienKetThuc = datBan.ThoiGianDatBan.AddHours(defaultDurationHours);
-
-                    var banIds = itemsList.Select(b => b.Id).ToList();
-                    var relevantBanSchedules = await _datBanService.GetBanSchedules()
-                        .Include(bs => bs.DatBan)
-                        .Where(bs => bs.TrangThai == TrangThaiBan.DaDatTruoc
-                            && bs.DatBan.TrangThai == TrangThaiBanDat.DaXacNhan
-                            && banIds.Contains(bs.BanId))
-                        .ToListAsync();
+                    var currentBanIds = await _datBanService.GetCurrentBanIdsAsync(datBanId.Value);
 
                     foreach (var ban in itemsList)
                     {
-                        var banSchedules = relevantBanSchedules
-                            .Where(bs => bs.BanId == ban.Id)
-                            .Select(bs => new { DatBanId = bs.DatBanId, ThoiGianBatDau = bs.ThoiGianBatDau })
-                            .ToList();
+                        var khaDung = await _datBanService.CheckTableAvailabilityAsync(
+                            ban.Id,
+                            datBan.ThoiGianDatBan,
+                            thoiGianKetThucDuKien,
+                            datBanId.Value);
 
-                        // Xác định trạng thái bàn dựa trên thời gian hiện tại
-                        var now = DateTime.Now;
-                        var currentSchedules = relevantBanSchedules
-                            .Where(bs => bs.BanId == ban.Id
-                                && bs.ThoiGianBatDau <= now
-                                && (bs.ThoiGianKetThuc.HasValue ? bs.ThoiGianKetThuc >= now : bs.ThoiGianBatDau.AddHours(defaultDurationHours).AddMinutes(bufferTimeMinutes) >= now))
-                            .ToList();
-
-                        var isCurrentlyAvailable = !currentSchedules.Any();
-
-                        // Kiểm tra xung đột với thời gian của đơn mới
-                        var isAvailableForNewBooking = true;
-                        if (!isCurrentlyAvailable)
+                        if (currentBanIds.Contains(ban.Id))
                         {
-                            isAvailableForNewBooking = false;
-                        }
-                        else
-                        {
-                            isAvailableForNewBooking = !relevantBanSchedules.Any(bs => bs.BanId == ban.Id && (
-                                (datBan.ThoiGianDatBan < bs.ThoiGianBatDau.AddHours(defaultDurationHours).AddMinutes(bufferTimeMinutes) &&
-                                 thoiGianDuKienKetThuc > bs.ThoiGianBatDau) ||
-                                Math.Abs((datBan.ThoiGianDatBan - bs.ThoiGianBatDau).TotalHours) < minimumTimeGapHours));
+                            khaDung.KhaDung = true;
+                            khaDung.LichDat = khaDung.LichDat
+                                .Where(ld => ld.DatBanId != datBanId)
+                                .ToList();
                         }
 
-                        scheduledInfoDict[ban.Id] = new
+                        khaDungBan[ban.Id] = khaDung;
+                    }
+                }
+                else
+                {
+                    foreach (var ban in itemsList)
+                    {
+                        var trangThai = await _datBanService.GetTableStatusAsync(ban.Id, DateTime.Now);
+                        khaDungBan[ban.Id] = new KhaDungBanViewModel
                         {
-                            IsAvailable = isAvailableForNewBooking,
-                            Schedules = banSchedules
+                            KhaDung = trangThai.TrangThaiValue == (int)TrangThaiBan.Trong,
+                            TrangThai = trangThai
                         };
                     }
                 }
@@ -526,13 +455,19 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     Id = item.Id,
                     TenBan = item.TenBan,
                     TenKhuVucBan = item.KhuVucBan?.TenKhuVuc,
-                    TrangThaiDisplay = scheduledInfoDict.ContainsKey(item.Id) && !(bool)scheduledInfoDict[item.Id].GetType().GetProperty("IsAvailable").GetValue(scheduledInfoDict[item.Id])
-                        ? "Đã đặt trước"
-                        : "Trống",
-                    TrangThaiValue = scheduledInfoDict.ContainsKey(item.Id) && !(bool)scheduledInfoDict[item.Id].GetType().GetProperty("IsAvailable").GetValue(scheduledInfoDict[item.Id])
-                        ? (int)TrangThaiBan.DaDatTruoc
-                        : (int)TrangThaiBan.Trong,
-                    ScheduledInfo = datBanId.HasValue ? scheduledInfoDict.GetValueOrDefault(item.Id, new { IsAvailable = true, Schedules = new List<object>() }) : null
+                    TrangThaiDisplay = khaDungBan[item.Id].KhaDung ? "Trống" : khaDungBan[item.Id].TrangThai.TrangThaiDisplay,
+                    TrangThaiValue = khaDungBan[item.Id].KhaDung ? (int)TrangThaiBan.Trong : khaDungBan[item.Id].TrangThai.TrangThaiValue,
+                    ThongTinLichDat = datBanId.HasValue ? new
+                    {
+                        KhaDung = khaDungBan[item.Id].KhaDung,
+                        LichDat = khaDungBan[item.Id].LichDat.Select(ld => new
+                        {
+                            ld.DatBanId,
+                            ThoiGianBatDau = ld.ThoiGianBatDauFormatted
+                        }),
+                        IsCurrentTable = khaDungBan[item.Id].IsCurrentTable
+                    } : null,
+                    IsCurrentTable = datBanId.HasValue && khaDungBan[item.Id].IsCurrentTable
                 });
 
                 return Json(new
@@ -542,12 +477,119 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     totalCount,
                     pageIndex,
                     pageSize,
-                    requiredBans
+                    soBanCanThiet
                 });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Lỗi khi tải dữ liệu: {ex.Message}" });
+                return Json(new
+                {
+                    success = false,
+                    message = $"Lỗi khi tải dữ liệu: {ex.Message}"
+                });
+            }
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChuyenBan(int datBanId, int[] banIds)
+        {
+            try
+            {
+                if (banIds == null || banIds.Length == 0)
+                {
+                    return Json(new { success = false, message = "Vui lòng chọn ít nhất một bàn." });
+                }
+
+                var datBan = await _datBanService.GetByIdWithKhachHangAsync(datBanId);
+                if (datBan == null)
+                {
+                    return Json(new { success = false, message = "Đặt bàn không tồn tại." });
+                }
+
+                int requiredBans = (int)Math.Ceiling((double)datBan.SoLuongNguoi / 6);
+                if (banIds.Length < requiredBans)
+                {
+                    return Json(new { success = false, message = $"Cần chọn ít nhất {requiredBans} bàn cho {datBan.SoLuongNguoi} người." });
+                }
+
+                var nhanVienIdClaim = User.FindFirst("NhanVienId")?.Value;
+                if (string.IsNullOrEmpty(nhanVienIdClaim) || !int.TryParse(nhanVienIdClaim, out int nhanVienId))
+                {
+                    return Json(new { success = false, message = "Không tìm thấy thông tin nhân viên. Vui lòng kiểm tra đăng nhập." });
+                }
+
+                var result = await _datBanService.ChuyenBanAsync(datBanId, banIds.ToList(), nhanVienId);
+                if (!result.Success)
+                {
+                    return Json(new { success = false, message = string.Join(", ", result.Errors) });
+                }
+
+                var datBanUpdated = result.Data;
+                await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
+                {
+                    id = datBanUpdated.Id,
+                    tenKhachHang = datBanUpdated.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                    sdt = datBanUpdated.KhachHang?.SDT ?? string.Empty,
+                    thoiGianDatBan = datBanUpdated.ThoiGianDatBan,
+                    soLuongNguoi = datBanUpdated.SoLuongNguoi,
+                    cocTien = datBanUpdated.CocTien,
+                    tenLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.TenLienHe : string.Empty,
+                    sdtLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.SDTLienHe : string.Empty,
+                    trangThai = (int)datBanUpdated.TrangThai
+                });
+
+                return Json(new { success = true, message = "Chuyển bàn thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi chuyển bàn: {ex.Message}" });
+            }
+        }
+
+        // Action mới: Xử lý hủy bàn, cập nhật trạng thái và xóa liên kết
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> HuyBan(int datBanId)
+        {
+            try
+            {
+                // Lấy ID nhân viên từ claims để ghi nhận người hủy
+                var nhanVienIdClaim = User.FindFirst("NhanVienId")?.Value;
+                if (string.IsNullOrEmpty(nhanVienIdClaim) || !int.TryParse(nhanVienIdClaim, out int nhanVienId))
+                {
+                    return Json(new { success = false, message = "Không tìm thấy thông tin nhân viên. Vui lòng kiểm tra đăng nhập." });
+                }
+
+                // Gọi service để hủy bàn (cập nhật TrangThai = DaHuy, xóa DatBan_Ban, BanSchedule)
+                var result = await _datBanService.HuyBanAsync(datBanId, nhanVienId);
+                if (!result.Success)
+                {
+                    return Json(new { success = false, message = string.Join(", ", result.Errors) });
+                }
+
+                // Lấy thông tin đơn đặt bàn sau khi hủy
+                var datBanUpdated = result.Data;
+                // Gửi thông báo SignalR để cập nhật client-side
+                await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
+                {
+                    id = datBanUpdated.Id,
+                    tenKhachHang = datBanUpdated.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                    sdt = datBanUpdated.KhachHang?.SDT ?? string.Empty,
+                    thoiGianDatBan = datBanUpdated.ThoiGianDatBan,
+                    soLuongNguoi = datBanUpdated.SoLuongNguoi,
+                    cocTien = datBanUpdated.CocTien,
+                    tenLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.TenLienHe : string.Empty,
+                    sdtLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.SDTLienHe : string.Empty,
+                    trangThai = (int)datBanUpdated.TrangThai
+                });
+
+                return Json(new { success = true, message = "Hủy bàn thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi hủy bàn: {ex.Message}" });
             }
         }
         private string GetEnumDisplayName<TEnum>(TEnum value) where TEnum : Enum

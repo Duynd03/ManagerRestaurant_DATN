@@ -1,0 +1,189 @@
+﻿@using System.Linq
+
+@model QuanLyNhaHang_DATN.ViewModels.HoaDonViewModel
+
+@{
+    ViewData["Title"] = "Chi tiết hóa đơn";
+    Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
+}
+
+<div class="col-md-12">
+    <div class="card shadow-sm">
+        <div class="card-header text-white">
+            <h4 class="card-title mb-0">Chi tiết hóa đơn - @Model.MaHoaDon</h4>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h5 class="mb-3">Thông tin khách hàng</h5>
+                    <div class="list-group">
+                        <div class="list-group-item">
+                            <strong>Họ và tên khách hàng:</strong> @(Model.TenKhachHang ?? "")
+                        </div>
+                        <div class="list-group-item">
+                            <strong>Số điện thoại:</strong> @(Model.SDT ?? "")
+                        </div>
+                        <div class="list-group-item">
+                            <strong>Họ và tên liên hệ:</strong> @(Model.TenLienHe ?? "")
+                        </div>
+                        <div class="list-group-item">
+                            <strong>Số điện thoại liên hệ:</strong> @(Model.SDTLienHe ?? "")
+                        </div>
+                        <div class="list-group-item">
+                            <strong>Bàn:</strong> @(Model.Bans ?? "")
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="mb-3">Thông tin hóa đơn</h5>
+                    <div class="list-group">
+                        <div class="list-group-item">
+                            <strong>Thời gian đặt bàn:</strong> @(Model.ThoiGianDatBan != default(DateTime) ? Model.ThoiGianDatBan.ToString("dd/MM/yyyy HH:mm") : "<span class='text-muted'>Chưa xác định</span>")
+                        </div>
+                        <div class="list-group-item">
+                            <strong>Thời gian thanh toán:</strong> @(Model.ThoiGianThanhToan != default(DateTime) ? Model.ThoiGianThanhToan.ToString("dd/MM/yyyy HH:mm") : "<span class='text-muted'>Chưa thanh toán</span>")
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4" />
+            <h5 class="mb-3">Chi tiết hóa đơn</h5>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Tên món ăn</th>
+                            <th>Số lượng</th>
+                            <th>Giá</th>
+                            <th>Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var goiMonList = ViewBag.GoiMonList as IEnumerable<QuanLyNhaHang_DATN.ViewModels.GoiMonViewModel>;
+                            if (goiMonList?.Any() == true)
+                            {
+                                var index = 0;
+                                foreach (var item in goiMonList)
+                                {
+                                    index++;
+                                    var tenMonAn = item.TenMonAn ?? $"Món {index}";
+                                    var soLuong = item.SoLuong > 0 ? item.SoLuong : 0;
+                                    var gia = item.Gia > 0 ? item.Gia : 0;
+                                    var thanhTien = soLuong * gia;
+
+                                    <tr>
+                                        <td>@tenMonAn</td>
+                                        <td>@soLuong</td>
+                                        <td>@gia.ToString("N0") VNĐ</td>
+                                        <td>@thanhTien.ToString("N0") VNĐ</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Không có món ăn nào.</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-6 offset-md-6 text-end">
+                    <h4 class="text-primary"><strong>Tổng tiền:</strong> @(Model.TongTien > 0 ? Model.TongTien.ToString("N0") + " VNĐ" : "0 VNĐ")</h4>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <p><strong>Phương thức thanh toán:</strong> @(Model.PhuongThucThanhToanDisplay ?? "<span class='text-muted'>Chưa thanh toán</span>")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Trạng thái:</strong> <span class="badge @(Model.TrangThaiDisplay == "Chưa thanh toán" ? "bg-warning" : "bg-success")">@(Model.TrangThaiDisplay ?? "Chưa xác định")</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                @if (Model.TrangThaiDisplay == "Chưa thanh toán")
+                {
+                    <form id="paymentForm" class="mb-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" id="hoaDonId" value="@Model.Id" />
+
+                        <div class="mb-3">
+                            <label for="phuongThucThanhToan" class="form-label">Chọn phương thức thanh toán:</label>
+                            <select id="phuongThucThanhToan" name="phuongThuc" class="form-select" required>
+                                <option value="">-- Chọn phương thức --</option>
+                                @foreach (var method in ViewBag.PaymentMethods as List<SelectListItem> ?? new List<SelectListItem>())
+                                {
+                                    <option value="@method.Value">@method.Text</option>
+                                }
+                            </select>
+                        </div>
+
+                        <button type="button" id="btnConfirmPayment" class="btn btn-success">
+                            <i class="fas fa-check-circle me-2"></i> Xác nhận thanh toán
+                        </button>
+                    </form>
+                }
+                <a href="@Url.Action("HoaDonHienThoi", "HoaDon", new { area = "Admin" })" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Quay lại
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#btnConfirmPayment").on("click", function () {
+                const hoaDonId = $("#hoaDonId").val();
+                console.log("ID từ Model:", hoaDonId);
+                if (!hoaDonId || hoaDonId <= 0) {
+                    alert("ID hóa đơn không hợp lệ!");
+                    return;
+                }
+
+                const phuongThucSelect = document.getElementById("phuongThucThanhToan");
+                const phuongThucValue = phuongThucSelect.value;
+                console.log("Phương thức thanh toán:", phuongThucValue);
+
+                if (!phuongThucValue || phuongThucValue === "") {
+                    alert("Vui lòng chọn phương thức thanh toán!");
+                    return;
+                }
+
+                const phuongThucInt = parseInt(phuongThucValue);
+                if (isNaN(phuongThucInt) || phuongThucInt <= 0) {
+                    alert("Phương thức thanh toán không hợp lệ!");
+                    return;
+                }
+
+                $.ajax({
+                    url: "/Admin/HoaDon/XacNhanThanhToan",
+                    type: "POST",
+                    data: { id: hoaDonId, phuongThuc: phuongThucInt },
+                    beforeSend: function (xhr) {
+                        xhr.setRequestHeader("RequestVerificationToken",
+                            $('input[name="__RequestVerificationToken"]').val());
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            alert(response.message);
+                            window.location.href = response.redirectUrl;
+                        } else {
+                            alert(response.message || "Có lỗi khi xác nhận thanh toán.");
+                        }
+                    },
+                    error: function (xhr) {
+                        console.error("Lỗi AJAX:", xhr);
+                        alert("Lỗi khi gửi yêu cầu: " + (xhr.responseJSON?.message || xhr.statusText));
+                    }
+                });
+            });
+        });
+    </script>
+}

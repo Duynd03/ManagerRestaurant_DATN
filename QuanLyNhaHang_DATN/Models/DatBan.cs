@@ -59,7 +59,7 @@ namespace QuanLyNhaHang_DATN.Models
         DaXacNhan =1,
         [Display(Name = "Đã Hủy")]
         DaHuy =2,
-        [Display(Name = "Hoàn tất")]
-         HoanTat =3
+        [Display(Name = "Hoàn thành")]
+         HoanThanh =3
     }
 }

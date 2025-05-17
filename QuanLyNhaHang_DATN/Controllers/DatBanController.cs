@@ -24,6 +24,7 @@ namespace QuanLyNhaHang_DATN.Controllers
         {
             return View();
         }
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAjax([FromBody] DatBanViewModel datBan)

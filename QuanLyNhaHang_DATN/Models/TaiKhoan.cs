@@ -20,8 +20,8 @@ namespace QuanLyNhaHang_DATN.Models
 
         [ForeignKey("QuyenId")]
         public Quyen Quyen { get; set; }
-        [ValidateNever]
-        public virtual ICollection<HoaDon> HoaDons { get; set; }
+        
+       
     }
     public enum TrangThaiTaiKhoan
     {

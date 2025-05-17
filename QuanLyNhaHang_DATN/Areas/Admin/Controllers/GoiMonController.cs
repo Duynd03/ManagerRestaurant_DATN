@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
+using QuanLyNhaHang_DATN.Services.HoaDonService;
+using QuanLyNhaHang_DATN.Services.DatBanService;
 
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
@@ -17,12 +19,15 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         private readonly IDanhMucService _danhMucService;
         private readonly IMonAnService _monAnService;
         private readonly IGoiMonService _goiMonService;
-
-        public GoiMonController(IDanhMucService danhMucService, IMonAnService monAnService, IGoiMonService goiMonService)
+        private readonly IHoaDonService _hoaDonService;
+        private readonly IDatBanService _datBanService;
+        public GoiMonController(IDanhMucService danhMucService, IMonAnService monAnService, IGoiMonService goiMonService, IHoaDonService hoaDonService, IDatBanService datBanService)
         {
             _danhMucService = danhMucService;
             _monAnService = monAnService;
             _goiMonService = goiMonService;
+            _hoaDonService = hoaDonService;
+            _datBanService = datBanService;
         }
 
         // Hiển thị trang gọi món
@@ -97,33 +102,13 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 }).ToList();
 
                 await _goiMonService.SaveGoiMonListAsync(request.datBanId, goiMonList);
+                await _datBanService.UpdateBanGoiMonAsync(request.datBanId); // Thêm để cập nhật trạng thái bàn
                 return Json(new { success = true, message = "Lưu gọi món thành công!" });
             }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = $"Lỗi khi lưu gọi món: {ex.Message}" });
             }
-        }
-
-        // Xuất hóa đơn
-        [HttpPost]
-        public async Task<IActionResult> CreateHoaDon(int datBanId)
-        {
-            decimal tongTien = await _goiMonService.CalculateTongTienAsync(datBanId);
-
-            var hoaDon = new HoaDon
-            {
-                DatBanId = datBanId,
-                TongTien = tongTien,
-                NgayThanhToan = DateTime.Now,
-                TrangThai = TrangThaiHoaDon.ChuaThanhToan,
-                PhuongThucThanhToan = PhuongThucThanhToans.TienMat
-            };
-
-            // Giả sử có IHoaDonService để lưu hóa đơn (chưa triển khai)
-            // await _hoaDonService.AddAsync(hoaDon);
-
-            return Json(new { success = true, message = "Tạo hóa đơn thành công!" });
         }
     }
 }

@@ -42,5 +42,38 @@ namespace QuanLyNhaHang_DATN.Repositories.DatBanRepository
                     dbb.DatBan.ThoiGianDatBan <= endTime &&
                     dbb.DatBan.TrangThai != TrangThaiBanDat.DaHuy);
         }
+        public async Task<DatBan> GetByIdWithDatBanBansAsync(int datBanId)
+        {
+            return await _dbSet
+                .Include(d => d.DatBanBans).ThenInclude(dbb => dbb.Ban)
+                .FirstOrDefaultAsync(d => d.Id == datBanId);
+        }
+
+        public async Task AddRangeDatBanBansAsync(IEnumerable<DatBan_Ban> datBanBans)
+        {
+            await _context.DatBan_Bans.AddRangeAsync(datBanBans);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task RemoveRangeDatBanBansAsync(IEnumerable<DatBan_Ban> datBanBans)
+        {
+            _context.DatBan_Bans.RemoveRange(datBanBans);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task AddRangeBanSchedulesAsync(IEnumerable<BanSchedule> banSchedules)
+        {
+            await _context.BanSchedules.AddRangeAsync(banSchedules);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task RemoveBanSchedulesByDatBanIdAsync(int datBanId)
+        {
+            var schedules = await _context.BanSchedules
+                .Where(bs => bs.DatBanId == datBanId)
+                .ToListAsync();
+            _context.BanSchedules.RemoveRange(schedules);
+            await _context.SaveChangesAsync();
+        }
     }
 }

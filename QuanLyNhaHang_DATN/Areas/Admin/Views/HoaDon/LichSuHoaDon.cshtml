@@ -1,0 +1,174 @@
+﻿@using System.Linq
+
+@model IEnumerable<QuanLyNhaHang_DATN.ViewModels.HoaDonViewModel>
+
+@{
+    ViewData["Title"] = "Lịch sử hóa đơn";
+    Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
+}
+
+<div class="col-md-12">
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex align-items-center">
+                <h4 class="card-title me-auto">Lịch sử hóa đơn</h4>
+                <button id="btnSearch" class="btn btn-secondary btn-round me-2" onclick="showSearchForm()">
+                    <i class="fa fa-search"></i> Tìm kiếm
+                </button>
+            </div>
+        </div>
+
+        <!-- Form tìm kiếm -->
+        <div id="searchFormContainer" class="card p-3 mb-3" style="display: none;">
+            <form id="searchForm">
+                <div class="mb-3">
+                    <label for="tenKhachHangSearch" class="form-label">Tên khách hàng</label>
+                    <input type="text" id="tenKhachHangSearch" name="tenKhachHang" class="form-control" placeholder="Nhập tên khách hàng" />
+                </div>
+                <div class="mb-3">
+                    <label for="sdtSearch" class="form-label">Số điện thoại</label>
+                    <input type="text" id="sdtSearch" name="sdt" class="form-control" placeholder="Nhập số điện thoại" />
+                </div>
+                <div class="mb-3">
+                    <label for="maHoaDonSearch" class="form-label">Mã hóa đơn</label>
+                    <input type="text" id="maHoaDonSearch" name="maHoaDon" class="form-control" placeholder="Nhập mã hóa đơn" />
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" onclick="loadLichSuHoaDon(1)">
+                        <i class="bi bi-search"></i> Tìm kiếm
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="hideSearchForm()">
+                        <i class="bi bi-x-circle"></i> Đóng
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Mã hóa đơn</th>
+                            <th>Tên khách hàng</th>
+                            <th>Số điện thoại</th>
+                            <th>Ngày thanh toán</th>
+                            <th>Tổng tiền</th>
+                            
+                            <th>Phương thức thanh toán</th>
+                            <th>Nhân viên xử lý</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hoaDonTableBody">
+                        <!-- Dữ liệu sẽ được load động qua AJAX -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="paginationContainer" class="pagination-container mt-3"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            loadLichSuHoaDon(1); // Load dữ liệu lần đầu
+        });
+
+        function loadLichSuHoaDon(pageIndex) {
+            const tenKhachHang = $("#tenKhachHangSearch").val() || '';
+            const sdt = $("#sdtSearch").val() || '';
+            const maHoaDon = $("#maHoaDonSearch").val() || '';
+            const pageSize = @ViewBag.PageSize || 5;
+
+            $.ajax({
+                url: "/Admin/HoaDon/GetPagedLichSuHoaDon",
+                type: "GET",
+                data: {
+                    pageIndex: pageIndex,
+                    pageSize: pageSize,
+                    tenKhachHang: tenKhachHang,
+                    sdt: sdt,
+                    maHoaDon: maHoaDon
+                },
+                success: function (response) {
+                    if (response.success) {
+                        let tbody = $("#hoaDonTableBody");
+                        tbody.empty();
+
+                        if (response.items.length === 0) {
+                            tbody.append(`<tr><td colspan="9" class="text-center text-muted">Không có hóa đơn nào</td></tr>`);
+                        } else {
+                            response.items.forEach(item => {
+                                tbody.append(`
+                                            <tr>
+                                                <td>${item.maHoaDon || ''}</td>
+                                                <td>${item.tenKhachHang || ''}</td>
+                                                <td>${item.sdt || ''}</td>
+                                                <td>${item.ngayThanhToan || ''}</td>
+                                                <td>${item.tongTien ? item.tongTien.toLocaleString() + ' VNĐ' : '0 VNĐ'}</td>
+                                               
+                                                <td>${item.phuongThucThanhToanDisplay || 'Chưa thanh toán'}</td>
+                                                <td>${item.tenNhanVien || ''}</td>
+                                                <td><span class="badge bg-success">${item.trangThaiDisplay || 'Đã thanh toán'}</span></td>
+                                                <td>
+                                                    <a href="/Admin/HoaDon/ChiTietHoaDon/${item.id}" class="btn btn-info btn-sm">
+                                                        <i class="fas fa-eye"></i> Xem chi tiết
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        `);
+                            });
+                        }
+
+                        updatePagination(response.totalCount, response.pageIndex, response.pageSize);
+                    } else {
+                        alert("Không tìm thấy hóa đơn.");
+                    }
+                },
+                error: function (xhr) {
+                    console.error("Lỗi AJAX:", xhr);
+                    alert("Lỗi khi tải hóa đơn: " + xhr.statusText);
+                }
+            });
+        }
+
+        function updatePagination(totalCount, pageIndex, pageSize) {
+            let totalPages = Math.ceil(totalCount / pageSize);
+            let paginationHtml = '<nav><ul class="pagination justify-content-center">';
+
+            if (pageIndex > 1) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadLichSuHoaDon(${pageIndex - 1}); return false;">Trước</a></li>`;
+            } else {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">Trước</span></li>';
+            }
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === pageIndex) {
+                    paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                } else {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadLichSuHoaDon(${i}); return false;">${i}</a></li>`;
+                }
+            }
+
+            if (pageIndex < totalPages) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadLichSuHoaDon(${pageIndex + 1}); return false;">Sau</a></li>`;
+            } else {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">Sau</span></li>';
+            }
+
+            paginationHtml += '</ul></nav>';
+            $("#paginationContainer").html(paginationHtml);
+        }
+
+        window.showSearchForm = function () {
+            document.getElementById('searchFormContainer').style.display = 'block';
+        }
+
+        window.hideSearchForm = function () {
+            document.getElementById('searchFormContainer').style.display = 'none';
+        }
+    </script>
+}

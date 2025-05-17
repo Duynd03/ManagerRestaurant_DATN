@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuanLyNhaHang_DATN.Data;
 
@@ -11,9 +12,11 @@ using QuanLyNhaHang_DATN.Data;
 namespace QuanLyNhaHang_DATN.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250513163412_Update_PhuongThucThanhToan_for_HoaDon")]
+    partial class Update_PhuongThucThanhToan_for_HoaDon
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -355,9 +358,6 @@ namespace QuanLyNhaHang_DATN.Migrations
                     b.Property<DateTime>("NgayThanhToan")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("NhanVienId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("PhuongThuc")
                         .HasColumnType("int");
 
@@ -373,8 +373,6 @@ namespace QuanLyNhaHang_DATN.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DatBanId");
-
-                    b.HasIndex("NhanVienId");
 
                     b.HasIndex("TaiKhoanId");
 
@@ -785,17 +783,13 @@ namespace QuanLyNhaHang_DATN.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("QuanLyNhaHang_DATN.Models.NhanVien", "NhanVien")
-                        .WithMany()
-                        .HasForeignKey("NhanVienId");
-
-                    b.HasOne("QuanLyNhaHang_DATN.Models.TaiKhoan", null)
+                    b.HasOne("QuanLyNhaHang_DATN.Models.TaiKhoan", "TaiKhoan")
                         .WithMany("HoaDons")
                         .HasForeignKey("TaiKhoanId");
 
                     b.Navigation("DatBan");
 
-                    b.Navigation("NhanVien");
+                    b.Navigation("TaiKhoan");
                 });
 
             modelBuilder.Entity("QuanLyNhaHang_DATN.Models.KhachHang", b =>

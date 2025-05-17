@@ -284,15 +284,19 @@
                 return;
             }
 
+            if (currentDatBanId <= 0) {
+                alert("Đặt bàn không hợp lệ!");
+                return;
+            }
+
             $.ajax({
-                url: "/Admin/GoiMon/CreateHoaDon",
+                url: "/Admin/HoaDon/CreateHoaDon", 
                 type: "POST",
-                data: JSON.stringify({ datBanId: currentDatBanId }),
-                contentType: "application/json",
+                data: { datBanId: currentDatBanId }, 
                 success: function (response) {
                     if (response.success) {
                         alert(response.message);
-                        window.location.href = "/Admin/HoaDon/Index";
+                        window.location.reload(); 
                     } else {
                         alert(response.message || "Có lỗi khi tạo hóa đơn.");
                     }

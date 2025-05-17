@@ -19,9 +19,18 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         Task<Result<DatBan>> XepBanAsync(int datBanId, List<int> banIds, int? nhanVienId);
         Task<List<string>> GetBanGhepAsync(int datBanId);
         Task<DatBan> GetByIdWithKhachHangAsync(int id);
-
+       
+        Task<Result<DatBan>> ChuyenBanAsync(int datBanId, List<int> banIds, int nhanVienId);
+        Task<Result<DatBan>> HuyBanAsync(int datBanId, int nhanVienId);
         // 
         IQueryable<BanSchedule> GetBanSchedules();
+        Task UpdateBanSauThanhToanAsync(int datBanId, DateTime ThoiGianKetThuc);
+        Task UpdateBanGoiMonAsync(int datBanId);
+        //
+        Task<List<int>> GetCurrentBanIdsAsync(int datBanId);
+        Task<TrangThaiBanViewModel> GetTableStatusAsync(int banId, DateTime currentTime);
+        //Task<KhaDungBanViewModel> CheckTableAvailabilityAsync(int banId, DateTime bookingTime, DateTime bookingEndTime);
+        Task<KhaDungBanViewModel> CheckTableAvailabilityAsync(int banId, DateTime bookingTime, DateTime bookingEndTime, int? currentDatBanId = null);
     }
 
 }

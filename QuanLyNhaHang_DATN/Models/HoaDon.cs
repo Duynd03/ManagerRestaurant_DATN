@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuanLyNhaHang_DATN.Models
@@ -10,10 +11,9 @@ namespace QuanLyNhaHang_DATN.Models
 
         [Required]
         public int DatBanId { get; set; }
-
-        public int? TaiKhoanId { get; set; }
+        public int? NhanVienId { get; set; }
         public string MaHoaDon { get; set; }
-        public DateTime NgayThanhToan { get; set; } = DateTime.Now;
+        public DateTime NgayThanhToan { get; set; }
 
         public decimal TongTien { get; set; }
 
@@ -21,13 +21,15 @@ namespace QuanLyNhaHang_DATN.Models
 
         public TrangThaiHoaDon TrangThai { get; set; }
 
-        public PhuongThucThanhToans PhuongThucThanhToan { get; set; }
+        public PhuongThucThanhToan? PhuongThuc { get; set; }
 
         [ForeignKey("DatBanId")]
         public DatBan DatBan { get; set; }
 
-        [ForeignKey("TaiKhoanId")]
-        public TaiKhoan TaiKhoan { get; set; }
+       
+        [ForeignKey("NhanVienId")]
+        [ValidateNever]
+        public NhanVien NhanVien { get; set; }
     }
      public enum TrangThaiHoaDon
      {
@@ -36,7 +38,7 @@ namespace QuanLyNhaHang_DATN.Models
         [Display(Name = "Chưa thanh toán")]
         ChuaThanhToan =0
      }
-    public enum PhuongThucThanhToans
+    public enum PhuongThucThanhToan
     {
         [Display(Name = "Tiền mặt")]
         TienMat = 1,
