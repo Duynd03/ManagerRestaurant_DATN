@@ -36,6 +36,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         {
             return View(new DangNhapViewModel());
         }
+       
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -60,6 +61,13 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                         return Json(new { success = false, message = "Người dùng không tồn tại trong hệ thống Identity." });
                     }
 
+                    // Kiểm tra vai trò: Chỉ cho phép Admin, Nhân viên, Kế toán (QuyenId = 1, 2, 3)
+                    if (user.QuyenId != 1 && user.QuyenId != 2 && user.QuyenId != 3)
+                    {
+                        await _signInManager.SignOutAsync();
+                        return Json(new { success = false, message = "Bạn không có quyền truy cập khu vực quản trị." });
+                    }
+
                     // Xóa các claims cũ nếu có
                     var existingClaims = await _userManager.GetClaimsAsync(user);
                     if (existingClaims.Any())
@@ -74,12 +82,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     string roleName = "Không xác định";
 
                     // Xác định role và thông tin nhân viên
-                    if (result.Data.QuyenId == 1) // Admin
-                    {
-                        roleName = "Admin";
-                        displayName = "Quản trị hệ thống";
-                    }
-                    else if (result.Data.QuyenId == 2 || result.Data.QuyenId == 3) // Nhân viên hoặc Kế toán
+                    if (result.Data.QuyenId == 1 || result.Data.QuyenId == 2 || result.Data.QuyenId == 3)
                     {
                         var nhanVien = await _nhanVienService.GetByTaiKhoanUsernameAsync(user.UserName);
                         if (nhanVien != null)
@@ -88,17 +91,27 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                             tenNhanVien = nhanVien.TenNhanVien;
                             displayName = tenNhanVien;
 
-                            roleName = result.Data.QuyenId == 2 ? "NhanVien" : "KeToan";
+                            roleName = result.Data.QuyenId switch
+                            {
+                                1 => "Admin",
+                                2 => "NhanVien",
+                                3 => "KeToan",
+                                _ => "Không xác định"
+                            };
+                        }
+                        else
+                        {
+                            return Json(new { success = false, message = "Không tìm thấy thông tin nhân viên cho tài khoản này." });
                         }
                     }
 
                     // Tạo danh sách claims
                     var claims = new List<Claim>
-                    {
-                        new Claim("DisplayName", displayName),
-                        new Claim(ClaimTypes.Role, roleName),
-                        new Claim("RoleName", roleName)
-                    };
+            {
+                new Claim("DisplayName", displayName),
+                new Claim(ClaimTypes.Role, roleName),
+                new Claim("RoleName", roleName)
+            };
 
                     if (!string.IsNullOrEmpty(nhanVienId))
                     {
@@ -125,60 +138,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 return Json(new { success = false, message = $"Lỗi hệ thống: {ex.Message}" });
             }
         }
-        //[HttpPost]
-        //[AllowAnonymous]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> DangNhap(DangNhapViewModel model)
-        //{
-        //    try
-        //    {
-        //        if (!ModelState.IsValid)
-        //        {
-        //            var errors = ModelState.Values.SelectMany(v => v.Errors)
-        //                                  .Select(e => e.ErrorMessage)
-        //                                  .ToList();
-        //            return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors });
-        //        }
-
-        //        var result = await _taiKhoanService.DangNhapAsync(model);
-        //        if (result.Success)
-        //        {
-        //            // Kiểm tra vai trò: Chỉ admin, nhân viên, kế toán được truy cập khu vực Admin
-        //            if (result.Data.QuyenId == 1 || result.Data.QuyenId == 2 || result.Data.QuyenId == 3)
-        //            {
-        //                // Tạo danh sách Claims
-        //                var claims = new List<Claim>
-        //                {
-        //                    new Claim(ClaimTypes.Name, result.Data.UserName),
-        //                    new Claim("DisplayName", result.Data.QuyenId == 1 ? "Admin" : (await _nhanVienService.GetByTaiKhoanUsernameAsync(result.Data.UserName))?.TenNhanVien ?? result.Data.UserName),
-        //                    new Claim("RoleName", result.Data.QuyenId == 1 ? "Quản lý" : (result.Data.QuyenId == 2 ? "Nhân viên" : "Kế toán")),
-        //                    new Claim(ClaimTypes.Role, result.Data.QuyenId == 1 ? "Quản lý" : (result.Data.QuyenId == 2 ? "Nhân viên" : "Kế toán"))
-        //                };
-
-        //                // Tạo ClaimsIdentity
-        //                var claimsIdentity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
-
-        //                // Đăng nhập với Claims
-        //                await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme,
-        //                    new ClaimsPrincipal(claimsIdentity),
-        //                    new AuthenticationProperties { IsPersistent = false });
-
-        //                return Json(new { success = true, redirectUrl = Url.Action("Index", "DashBoard", new { area = "Admin" }) });
-        //            }
-        //            else
-        //            {
-        //                await _taiKhoanService.DangXuatAsync();
-        //                return Json(new { success = false, message = "Bạn không có quyền truy cập khu vực quản trị." });
-        //            }
-        //        }
-
-        //        return Json(new { success = false, message = result.Message });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return Json(new { success = false, message = $"Lỗi hệ thống: {ex.Message}" });
-        //    }
-        //}
+       
 
         [HttpPost]
         [ValidateAntiForgeryToken]
