@@ -83,14 +83,88 @@
 </div>
 <!-- Reservation End -->
 @section Scripts {
+    <!-- Giữ nguyên các script import -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/additional-methods.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
 
     <script>
-        // Tự động điền thông tin nếu đã đăng nhập
+        // Hàm load modal (giữ nguyên)
+        function loadModal(url, modalId) {
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function (data) {
+                    $('#modalContainer').html(data);
+                    $(modalId).modal('show');
+                },
+                error: function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi',
+                        text: 'Không thể tải form.',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        }
+
         $(document).ready(function () {
+            // Kết nối SignalR (giữ nguyên)
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/datBanHub")
+                .build();
+
+            connection.on("ReceivePaymentNotification", (notification) => {
+                if (notification.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thanh toán thành công!',
+                        text: `Mã đặt bàn của bạn là: ${notification.datBanId}`,
+                        confirmButtonText: 'Quay về trang chủ',
+                        allowOutsideClick: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = '@Url.Action("Index", "Home")';
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Thanh toán thất bại',
+                        text: notification.message || 'Có lỗi xảy ra khi xử lý thanh toán.',
+                        confirmButtonText: 'Thử lại',
+                        allowOutsideClick: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = '@Url.Action("Create", "DatBan")';
+                        }
+                    });
+                }
+            });
+
+            connection.start().catch(err => console.error(err.toString()));
+
+            // Khôi phục dữ liệu form từ sessionStorage nếu có (giữ nguyên)
+            const savedFormData = sessionStorage.getItem('pendingDatBan');
+            if (savedFormData) {
+                const formData = JSON.parse(savedFormData);
+                $('#tenKhachHang').val(formData.TenKhachHang);
+                $('#sdtKhachHang').val(formData.SDT);
+                $('#datetime').val(formData.ThoiGianDatBan);
+                $('#people').val(formData.SoLuongNguoi);
+                $('#proxyBooking').prop('checked', formData.IsDatHo);
+                if (formData.IsDatHo) {
+                    $('.proxy-field').show();
+                    $('#name').val(formData.TenLienHe);
+                    $('#sdt').val(formData.SDTLienHe);
+                }
+                $('#ghiChu').val(formData.GhiChu);
+            }
+
             if ("@User.Identity.IsAuthenticated".toLowerCase() === "true") {
                 $.ajax({
                     url: '@Url.Action("GetUserInfo", "DatBan")',
@@ -106,9 +180,54 @@
                     }
                 });
             }
+
+            // Xóa phần xử lý đăng ký (#registerForm) vì không cần nữa
+
+            // Xử lý đăng nhập
+            $(document).on('submit', '#loginForm', function (e) {
+                e.preventDefault();
+                $.ajax({
+                    url: '@Url.Action("DangNhap", "Account")',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    headers: {
+                        "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Đăng nhập thành công!',
+                                text: 'Đang tiếp tục quá trình đặt bàn...',
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(() => {
+                                $('#loginModal').modal('hide');
+                                // Gửi lại yêu cầu đặt bàn
+                                submitBookingForm();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Lỗi đăng nhập',
+                                text: response.message || 'Có lỗi xảy ra khi đăng nhập.',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi',
+                            text: 'Có lỗi xảy ra khi gửi yêu cầu đăng nhập.',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            });
         });
 
-        // Toggle proxy booking fields
+        // Giữ nguyên phần xử lý proxyBooking và validate form
         $('#proxyBooking').on('change', function () {
             if ($(this).is(':checked')) {
                 $('.proxy-field').show();
@@ -119,37 +238,16 @@
             }
         });
 
-        // Client-side validation
         $("#bookingForm").validate({
             rules: {
-                TenKhachHang: {
-                    required: true
-                },
-                SDT: {
-                    required: true,
-                    digits: true,
-                    minlength: 10,
-                    maxlength: 10
-                },
-                ThoiGianDatBan: {
-                    required: true
-                },
-                SoLuongNguoi: {
-                    required: true,
-                    min: 1
-                },
-                TenLienHe: {
-                    required: function () {
-                        return $("#proxyBooking").is(":checked");
-                    }
-                },
+                TenKhachHang: { required: true },
+                SDT: { required: true, digits: true, minlength: 10, maxlength: 10 },
+                ThoiGianDatBan: { required: true },
+                SoLuongNguoi: { required: true, min: 1 },
+                TenLienHe: { required: function () { return $("#proxyBooking").is(":checked"); } },
                 SDTLienHe: {
-                    required: function () {
-                        return $("#proxyBooking").is(":checked");
-                    },
-                    digits: true,
-                    minlength: 10,
-                    maxlength: 10
+                    required: function () { return $("#proxyBooking").is(":checked"); },
+                    digits: true, minlength: 10, maxlength: 10
                 }
             },
             messages: {
@@ -180,40 +278,40 @@
             }
         });
 
-        // Xử lý gửi form đặt bàn
-        $('#bookingForm').on('submit', function (e) {
-            e.preventDefault();
-
-            // Kiểm tra validation
-            if (!$(this).valid()) {
+        function submitBookingForm() {
+            if (!$("#bookingForm").valid()) {
                 return;
             }
 
-            // Kiểm tra đăng nhập
-            if ("@User.Identity.IsAuthenticated".toLowerCase() !== "true") {
-                console.log("Chưa đăng nhập, mở modal đăng ký");
-                loadModal('@Url.Action("DangKy", "Account")', '#registerModal');
-                return;
-            }
+            var soLuongNguoi = parseInt($('#people').val());
+            var cocTien = soLuongNguoi * 50000;
 
-            // Thu thập dữ liệu từ form
             var formData = {
                 TenKhachHang: $('#tenKhachHang').val(),
                 SDT: $('#sdtKhachHang').val(),
                 ThoiGianDatBan: $('#datetime').val(),
-                SoLuongNguoi: parseInt($('#people').val()),
+                SoLuongNguoi: soLuongNguoi,
                 IsDatHo: $('#proxyBooking').is(':checked'),
                 TenLienHe: $('#name').val() || null,
                 SDTLienHe: $('#sdt').val() || null,
-                CocTien: 0,
+                CocTien: cocTien,
                 BanId: null,
-                Loai: 1, // Mặc định là DatTruoc (1)
+                Loai: 1,
                 GhiChu: $('#ghiChu').val() || null
             };
 
-            // Gửi dữ liệu qua AJAX
+            // Lưu dữ liệu form vào sessionStorage
+            sessionStorage.setItem('pendingDatBan', JSON.stringify(formData));
+
+            // Sửa đổi: Hiển thị modal đăng nhập thay vì modal đăng ký
+            if ("@User.Identity.IsAuthenticated".toLowerCase() !== "true") {
+                console.log("Chưa đăng nhập, mở modal đăng nhập");
+                loadModal('@Url.Action("DangNhap", "Account")', '#loginModal');
+                return;
+            }
+
             $.ajax({
-                url: '@Url.Action("CreateAjax", "DatBan")',
+                url: '@Url.Action("CreatePayment", "DatBan")',
                 type: 'POST',
                 contentType: 'application/json',
                 headers: {
@@ -222,24 +320,31 @@
                 data: JSON.stringify(formData),
                 success: function (response) {
                     if (response.success) {
-                        alert(response.message);
-                        $('#bookingForm')[0].reset();
-                        $('.proxy-field').hide();
-                        $('#proxyBooking').prop('checked', false);
-                        if ("@User.Identity.IsAuthenticated".toLowerCase() !== "true") {
-                            $('#tenKhachHang, #sdtKhachHang').val('');
-                        }
+                        sessionStorage.removeItem('pendingDatBan');
+                        window.location.href = response.paymentUrl;
                     } else {
-                        alert(response.message);
-                        if (response.errors) {
-                            console.log(response.errors);
-                        }
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi',
+                            text: response.message,
+                            confirmButtonText: 'OK'
+                        });
                     }
                 },
                 error: function () {
-                    alert('Có lỗi xảy ra khi gửi yêu cầu.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi',
+                        text: 'Có lỗi xảy ra khi gửi yêu cầu.',
+                        confirmButtonText: 'OK'
+                    });
                 }
             });
+        }
+
+        $('#bookingForm').on('submit', function (e) {
+            e.preventDefault();
+            submitBookingForm();
         });
     </script>
 }

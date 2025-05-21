@@ -1,0 +1,9 @@
+﻿@{
+    ViewData["Title"] = "Thanh toán thất bại";
+}
+
+<div class="container text-center my-5">
+    <h2 class="text-danger">Thanh toán thất bại</h2>
+    <p>@ViewBag.Message</p>
+    <a href="@Url.Action("Create", "DatBan")" class="btn btn-primary mt-3">Thử lại</a>
+</div>

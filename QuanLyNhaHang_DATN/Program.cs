@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using QuanLyNhaHang_DATN.Models;
 using QuanLyNhaHang_DATN.Hubs;
 using System.Net;
+using QuanLyNhaHang_DATN.Config;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -59,6 +60,11 @@ builder.Services.AddSession(options =>
 // Thêm SignalR
 builder.Services.AddSignalR();
 
+// Thêm HttpContextAccessor
+builder.Services.AddHttpContextAccessor();
+
+// Thêm cấu hình VNPayConfig
+builder.Services.Configure<VNPayConfig>(builder.Configuration.GetSection("VNPayConfig"));
 //
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("NhaHangConnection")));

@@ -26,7 +26,8 @@ namespace QuanLyNhaHang_DATN.ViewModels
         [Required(ErrorMessage = "Vui lòng nhập số lượng người")]
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng người phải lớn hơn 0")]
         public int SoLuongNguoi { get; set; }
-
+        [Required(ErrorMessage = "Số tiền cọc không hợp lệ")]
+        [Range(0, double.MaxValue, ErrorMessage = "Số tiền cọc không hợp lệ")]
         public decimal CocTien { get; set; }
         public string? GhiChu { get; set; }
         public LoaiDatBan Loai { get; set; }

@@ -1,52 +1,290 @@
-﻿@{
+﻿@model QuanLyNhaHang_DATN.ViewModels.DashBoardViewModel
+
+@{
+    ViewData["Title"] = "Bảng Điều Khiển";
     Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
-    ViewBag.Title = "Trang DataTables";
 }
 
-@section PageHeader {
-    <h3 class="fw-bold mb-3">DataTables.Net</h3>
-    <ul class="breadcrumbs mb-3">
-        <li class="nav-home">
-            <a href="#"><i class="icon-home"></i></a>
-        </li>
-        <li class="separator"><i class="icon-arrow-right"></i></li>
-        <li class="nav-item"><a href="#">Tables</a></li>
-        <li class="separator"><i class="icon-arrow-right"></i></li>
-        <li class="nav-item"><a href="#">Datatables</a></li>
-    </ul>
-}
+<div class="container-fluid py-4">
+    <h2 class="mb-4 fw-bold">DashBoard</h2>
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="card-title">Danh sách người dùng</h4>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>STT</th>
-                                <th>Họ tên</th>
-                                <th>Email</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>1</td>
-                                <td>Nguyễn Văn A</td>
-                                <td>a@gmail.com</td>
-                            </tr>
-                            <tr>
-                                <td>2</td>
-                                <td>Trần Thị B</td>
-                                <td>b@gmail.com</td>
-                            </tr>
-                        </tbody>
-                    </table>
+    <!-- Phần Lọc -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Tùy Chọn Lọc</h5>
+        </div>
+        <div class="card-body">
+            <!-- Tab Điều Hướng -->
+            <ul class="nav nav-pills mb-3" id="filterTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @(Context.Request.Query["filterType"] == "daily" || string.IsNullOrEmpty(Context.Request.Query["filterType"]) ? "active" : "")"
+                            id="daily-tab" data-bs-toggle="pill" data-bs-target="#daily" type="button" role="tab" aria-controls="daily"
+                            aria-selected="true">
+                        Theo Ngày
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @(Context.Request.Query["filterType"] == "monthly" ? "active" : "")"
+                            id="monthly-tab" data-bs-toggle="pill" data-bs-target="#monthly" type="button" role="tab" aria-controls="monthly"
+                            aria-selected="false">
+                        Theo Tháng
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @(Context.Request.Query["filterType"] == "yearly" ? "active" : "")"
+                            id="yearly-tab" data-bs-toggle="pill" data-bs-target="#yearly" type="button" role="tab" aria-controls="yearly"
+                            aria-selected="false">
+                        Theo Năm
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Nội Dung Tab -->
+            <div class="tab-content" id="filterTabContent">
+                <!-- Lọc Theo Ngày -->
+                <div class="tab-pane fade @(Context.Request.Query["filterType"] == "daily" || string.IsNullOrEmpty(Context.Request.Query["filterType"]) ? "show active" : "")"
+                     id="daily" role="tabpanel" aria-labelledby="daily-tab">
+                    <form method="get" class="row g-3 align-items-end">
+                        <input type="hidden" name="filterType" value="daily">
+                        <div class="col-md-5">
+                            <label for="fromDate" class="form-label">Từ Ngày</label>
+                            <input type="date" class="form-control" id="fromDate" name="fromDate"
+                                   value="@(Context.Request.Query["fromDate"])">
+                        </div>
+                        <div class="col-md-5">
+                            <label for="toDate" class="form-label">Đến Ngày</label>
+                            <input type="date" class="form-control" id="toDate" name="toDate"
+                                   value="@(Context.Request.Query["toDate"])">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100 mb-2">
+                                <i class="fas fa-filter me-2"></i>Lọc
+                            </button>
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-sync-alt me-2"></i>Đặt Lại
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Lọc Theo Tháng -->
+                <div class="tab-pane fade @(Context.Request.Query["filterType"] == "monthly" ? "show active" : "")"
+                     id="monthly" role="tabpanel" aria-labelledby="monthly-tab">
+                    <form method="get" class="row g-3 align-items-end">
+                        <input type="hidden" name="filterType" value="monthly">
+                        <div class="col-md-5">
+                            <label for="month" class="form-label">Tháng</label>
+                            <select class="form-select" id="month" name="month">
+                                @for (int i = 1; i <= 12; i++)
+                                {
+                                    <option value="@i" @(Context.Request.Query["month"] == i.ToString() ? "selected" : "")>Tháng @i</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="year" class="form-label">Năm</label>
+                            <select class="form-select" id="year" name="year">
+                                @for (int i = DateTime.Now.Year - 5; i <= DateTime.Now.Year; i++)
+                                {
+                                    <option value="@i" @(Context.Request.Query["year"] == i.ToString() ? "selected" : "")>@i</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100 mb-2">
+                                <i class="fas fa-filter me-2"></i>Lọc
+                            </button>
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-sync-alt me-2"></i>Đặt Lại
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Lọc Theo Năm -->
+                <div class="tab-pane fade @(Context.Request.Query["filterType"] == "yearly" ? "show active" : "")"
+                     id="yearly" role="tabpanel" aria-labelledby="yearly-tab">
+                    <form method="get" class="row g-3 align-items-end">
+                        <input type="hidden" name="filterType" value="yearly">
+                        <div class="col-md-5">
+                            <label for="year" class="form-label">Năm</label>
+                            <select class="form-select" id="year" name="year">
+                                @for (int i = DateTime.Now.Year - 5; i <= DateTime.Now.Year; i++)
+                                {
+                                    <option value="@i" @(Context.Request.Query["year"] == i.ToString() ? "selected" : "")>@i</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="compareYear" class="form-label">So Sánh Năm</label>
+                            <select class="form-select" id="compareYear" name="compareYear">
+                                <option value="">-- Chọn Năm --</option>
+                                @for (int i = DateTime.Now.Year - 5; i <= DateTime.Now.Year; i++)
+                                {
+                                    <option value="@i" @(Context.Request.Query["compareYear"] == i.ToString() ? "selected" : "")>@i</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100 mb-2">
+                                <i class="fas fa-filter me-2"></i>Lọc
+                            </button>
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-sync-alt me-2"></i>Đặt Lại
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Thống Kê Nhanh -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-invoice fa-2x text-primary mb-3"></i>
+                    <h5 class="card-title">Tổng Hóa Đơn</h5>
+                    <h2 class="card-text text-primary fw-bold">@Model.SoHoaDonDaThanhToan</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-dollar-sign fa-2x text-success mb-3"></i>
+                    <h5 class="card-title">Doanh Thu</h5>
+                    <h2 class="card-text text-success fw-bold">@Model.DoanhThu.ToString("N0") đ</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x text-info mb-3"></i>
+                    <h5 class="card-title">Khách Hàng</h5>
+                    <h2 class="card-text text-info fw-bold">@Model.SoLuongKhachHang</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Biểu Đồ AMCharts -->
+    @if (Model.ShowChart)
+    {
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Biểu Đồ Doanh Thu - @Model.ChartTitle</h5>
+            </div>
+            <div class="card-body">
+                <div id="chartdiv" style="width: 100%; height: 500px;"></div>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(Context.Request.Query["fromDate"]) || !string.IsNullOrEmpty(Context.Request.Query["month"]) || !string.IsNullOrEmpty(Context.Request.Query["year"]))
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>Vui lòng chọn khoảng thời gian hợp lệ để hiển thị biểu đồ.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
 </div>
+
+@section Scripts {
+    @if (Model.ShowChart)
+    {
+        <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+        <script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+        <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+        <script>
+            am5.ready(function () {
+                var root = am5.Root.new("chartdiv");
+                root.setThemes([am5themes_Animated.new(root)]);
+
+                var chart = root.container.children.push(
+                    am5xy.XYChart.new(root, {
+                        panX: true,
+                        panY: false,
+                        wheelX: "panX",
+                        wheelY: "zoomX",
+                        pinchZoomX: true,
+                        layout: root.verticalLayout,
+                        paddingTop: 20
+                    })
+                );
+
+                var legend = chart.children.push(
+                    am5.Legend.new(root, {
+                        centerX: am5.p50,
+                        x: am5.p50,
+                        marginTop: 20
+                    })
+                );
+
+                var xAxis = chart.xAxes.push(
+                    am5xy.CategoryAxis.new(root, {
+                        categoryField: "label",
+                        renderer: am5xy.AxisRendererX.new(root, {
+                            minGridDistance: 30,
+                            cellStartLocation: 0.1,
+                            cellEndLocation: 0.9
+                        }),
+                        tooltip: am5.Tooltip.new(root, {})
+                    })
+                );
+                xAxis.data.setAll(@Html.Raw(Json.Serialize(Model.DoanhThuTheoThoiGian)));
+
+                var yAxis = chart.yAxes.push(
+                    am5xy.ValueAxis.new(root, {
+                        renderer: am5xy.AxisRendererY.new(root, {}),
+                        numberFormat: "#,###'đ'",
+                        min: 0
+                    })
+                );
+
+                function createSeries(name, data, color, widthPercent) {
+                    var series = chart.series.push(
+                        am5xy.ColumnSeries.new(root, {
+                            name: name,
+                            xAxis: xAxis,
+                            yAxis: yAxis,
+                            valueYField: "doanhThu",
+                            categoryXField: "label",
+                            clustered: true,
+                            fill: am5.color(color),
+                            stroke: am5.color(color)
+                        })
+                    );
+
+                    series.columns.template.setAll({
+                        cornerRadiusTL: 8,
+                        cornerRadiusTR: 8,
+                        strokeOpacity: 0,
+                        tooltipText: "{categoryX}: {valueY.formatNumber('#,###')} đ",
+                        width: am5.percent(widthPercent)
+                    });
+
+                    series.data.setAll(data);
+                    return series;
+                }
+
+                createSeries(@Html.Raw(Json.Serialize(Model.ChartTitle)), @Html.Raw(Json.Serialize(Model.DoanhThuTheoThoiGian)), "#007bff", 45);
+
+            @if (Model.DoanhThuSoSanh != null && Model.DoanhThuSoSanh.Any())
+            {
+                @:createSeries(@Html.Raw(Json.Serialize(Model.CompareTitle)), @Html.Raw(Json.Serialize(Model.DoanhThuSoSanh)), "#dc3545", 45);
+            }
+
+                            var cursor = chart.set("cursor", am5xy.XYCursor.new(root, {
+                    behavior: "zoomX"
+                }));
+                cursor.lineY.set("visible", false);
+
+                legend.data.setAll(chart.series.values);
+
+                chart.appear(1000, 100);
+            });
+        </script>
+    }
+}

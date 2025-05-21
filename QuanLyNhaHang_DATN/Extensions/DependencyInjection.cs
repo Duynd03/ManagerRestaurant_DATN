@@ -10,6 +10,7 @@ using QuanLyNhaHang_DATN.Repositories.NhanVienRepository;
 using QuanLyNhaHang_DATN.Repositories.TaiKhoanRepository;
 using QuanLyNhaHang_DATN.Services.BanService;
 using QuanLyNhaHang_DATN.Services.DanhMucService;
+using QuanLyNhaHang_DATN.Services.DashBoardService;
 using QuanLyNhaHang_DATN.Services.DatBanService;
 using QuanLyNhaHang_DATN.Services.GoiMonService;
 using QuanLyNhaHang_DATN.Services.HoaDonService;
@@ -18,6 +19,7 @@ using QuanLyNhaHang_DATN.Services.KhuVucBanService;
 using QuanLyNhaHang_DATN.Services.MonAnService;
 using QuanLyNhaHang_DATN.Services.NhanVienService;
 using QuanLyNhaHang_DATN.Services.TaiKhoanService;
+using QuanLyNhaHang_DATN.Services.VNPay;
 
 namespace QuanLyNhaHang_DATN.Extensions
 {
@@ -67,6 +69,10 @@ namespace QuanLyNhaHang_DATN.Extensions
             services.AddScoped<IHoaDonRepository, HoaDonRepository>();
             services.AddScoped<IHoaDonService, HoaDonService>();
 
+            //Dashboard
+            services.AddScoped<IDashBoardService, DashBoardService>();
+            // VNPay
+            services.AddScoped<IVNPayService, VNPayService>();
             return services;
             
         }
