@@ -4,7 +4,7 @@
     Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
     var khuVucBans = ViewBag.KhuVucBanList as List<QuanLyNhaHang_DATN.Models.KhuVucBan>;
     int? selectedKhuVucBanId = ViewBag.SelectedKhuVucBanId;
-    int? selectedTrangThai = ViewBag.SelectedTrangThai;
+   
     string searchTenBan = ViewBag.SearchTenBan as string;
 }
 
@@ -43,7 +43,7 @@
                     </select>
                 </div>
 
-                <div class="mb-3">
+               @*  <div class="mb-3">
                     <label for="trangThai" class="form-label">Trạng thái</label>
                     <select name="trangThai" class="form-select">
                         <option value="">-- Tất cả --</option>
@@ -51,7 +51,7 @@
                         <option value="1" @(selectedTrangThai == 1 ? "selected" : "")>Đã đặt trước</option>
                         <option value="2" @(selectedTrangThai == 2 ? "selected" : "")>Đang sử dụng</option>
                     </select>
-                </div>
+                </div> *@
 
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-primary" onclick="searchData()">
@@ -106,17 +106,17 @@
             window.loadData = function (pageIndex = 1, pageSize = 5) {
                 let tenBan = $("input[name='tenBan']").val();
                 let khuVucBanId = $("select[name='khuVucBanId']").val();
-                let trangThai = $("select[name='trangThai']").val();
+              
 
                 $.get("/Admin/Ban/GetPagedData", {
                     pageIndex: pageIndex,
                     pageSize: pageSize,
                     tenBan: tenBan,
-                    khuVucBanId: khuVucBanId,
-                    trangThai: trangThai
+                    khuVucBanId: khuVucBanId
+                  
                 }, function (response) {
                     updateTable(response.items);
-                    updatePagination(response.totalCount, response.pageIndex, response.pageSize, tenBan, khuVucBanId, trangThai);
+                    updatePagination(response.totalCount, response.pageIndex, response.pageSize, tenBan, khuVucBanId);
                     currentPageIndex = pageIndex;
                     currentPageSize = pageSize;
                 }).fail(function () {
@@ -134,32 +134,21 @@
             function updateTable(items) {
                 let html = '';
                 items.forEach(function (item) {
-                    // Xác định màu sắc dựa trên trạng thái
-                    let trangThaiColor = '';
-                    if (item.trangThaiValue === 0) { // Trống
-                        trangThaiColor = 'red';
-                    } else if (item.trangThaiValue === 1) { // Đã đặt trước
-                        trangThaiColor = 'orange';
-                    } else if (item.trangThaiValue === 2) { // Đang sử dụng
-                        trangThaiColor = 'green';
-                    }
                     html += `<tr>
-                                                <td>${item.id}</td>
-                                                <td>${item.tenBan}</td>
-                                                <td>${item.tenKhuVucBan || 'Không có Khu vực'}</td>
-                                                <td style="color: ${trangThaiColor}">${item.trangThaiDisplay || 'Không xác định'}</td>
-                                                <td>
-                                                   
-                                                    <button class="btn btn-sm btn-warning editBtn" data-id="${item.id}">Cập nhật</button>
-                                                    <button class="btn btn-sm btn-danger deleteBtn" data-id="${item.id}">Xóa</button>
-                                                </td>
-                                            </tr>`;
+                            <td>${item.id}</td>
+                            <td>${item.tenBan}</td>
+                            <td>${item.tenKhuVucBan || 'Không có Khu vực'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning editBtn" data-id="${item.id}">Cập nhật</button>
+                                <button class="btn btn-sm btn-danger deleteBtn" data-id="${item.id}">Xóa</button>
+                            </td>
+                        </tr>`;
                 });
                 $("#banList tbody").html(html);
             }
             // <td>${item.trangThaiDisplay}</td>
             // Hàm cập nhật phân trang
-            function updatePagination(totalCount, pageIndex, pageSize, tenBan, khuVucBanId, trangThai) {
+            function updatePagination(totalCount, pageIndex, pageSize, tenBan, khuVucBanId) {
                 let totalPages = Math.ceil(totalCount / pageSize);
                 let paginationHtml = '<nav><ul class="pagination">';
 

@@ -19,11 +19,11 @@
             @Html.ValidationMessageFor(m => m.KhuVucBanId, "", new { @class = "text-danger" })
         </div>
        
-        <div class="form-group mb-3">
+       @*  <div class="form-group mb-3">
             <label class="form-label">Trạng thái bàn<span class="text-danger">*</span></label>
             @Html.DropDownListFor(m => m.TrangThai, (List<SelectListItem>)ViewBag.TrangThaiList, "-- Chọn trạng thái --", new { @class = "form-control" })
             @Html.ValidationMessageFor(m => m.TrangThai, "", new { @class = "text-danger" })
-        </div>
+        </div> *@
         
     </div>
     <div class="modal-footer">

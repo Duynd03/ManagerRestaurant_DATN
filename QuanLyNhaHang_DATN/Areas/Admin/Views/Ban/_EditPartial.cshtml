@@ -20,11 +20,11 @@
             @Html.DropDownListFor(m => m.KhuVucBanId, new SelectList(ViewBag.KhuVucBans, "Id", "TenKhuVuc", Model.KhuVucBanId), "-- Chọn khu vực --", new { @class = "form-control", required = "required" })
             @Html.ValidationMessageFor(m => m.KhuVucBanId, "", new { @class = "text-danger" })
         </div>
-        <div class="form-group mb-3">
+       @*  <div class="form-group mb-3">
             <label class="form-label">Trạng thái <span class="text-danger">*</span></label>
             @Html.DropDownListFor(m => m.TrangThai, (List<SelectListItem>)ViewBag.TrangThaiList, "-- Chọn trạng thái --", new { @class = "form-control" })
             @Html.ValidationMessageFor(m => m.TrangThai, "", new { @class = "text-danger" })
-        </div>
+        </div> *@
        
     </div>
     <div class="modal-footer">

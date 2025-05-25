@@ -53,7 +53,7 @@
                             <th>Tên khách hàng</th>
                             <th>Số điện thoại</th>
                             <th>Ngày thanh toán</th>
-                            <th>Tổng tiền</th>
+                            <th>Tổng tiền thanh toán</th>
                             
                             <th>Phương thức thanh toán</th>
                             <th>Nhân viên xử lý</th>
@@ -108,7 +108,7 @@
                                                 <td>${item.tenKhachHang || ''}</td>
                                                 <td>${item.sdt || ''}</td>
                                                 <td>${item.ngayThanhToan || ''}</td>
-                                                <td>${item.tongTien ? item.tongTien.toLocaleString() + ' VNĐ' : '0 VNĐ'}</td>
+                                                <td>${item.tongTienThanhToan ? item.tongTienThanhToan.toLocaleString() + ' VNĐ' : '0 VNĐ'}</td>
                                                
                                                 <td>${item.phuongThucThanhToanDisplay || 'Chưa thanh toán'}</td>
                                                 <td>${item.tenNhanVien || ''}</td>

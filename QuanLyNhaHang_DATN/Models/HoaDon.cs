@@ -15,8 +15,8 @@ namespace QuanLyNhaHang_DATN.Models
         public string MaHoaDon { get; set; }
         public DateTime NgayThanhToan { get; set; }
 
-        public decimal TongTien { get; set; }
-
+        public decimal TongTienGoiMon { get; set; }
+        public decimal TongTienThanhToan { get; set; }
         public decimal? GiamGia { get; set; }
 
         public TrangThaiHoaDon TrangThai { get; set; }

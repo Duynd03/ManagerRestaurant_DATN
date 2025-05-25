@@ -31,6 +31,8 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         Task<TrangThaiBanViewModel> GetTableStatusAsync(int banId, DateTime currentTime);
         //Task<KhaDungBanViewModel> CheckTableAvailabilityAsync(int banId, DateTime bookingTime, DateTime bookingEndTime);
         Task<KhaDungBanViewModel> CheckTableAvailabilityAsync(int banId, DateTime bookingTime, DateTime bookingEndTime, int? currentDatBanId = null);
+        Task<List<dynamic>> GetBanScheduleDetailsForBan(int banId, DateTime currentTime);
+        (int MinAllowedBans, int MaxAllowedBans, string TableMessage) CalculateRequiredTables(int soLuongNguoi);
     }
 
 }

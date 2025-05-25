@@ -24,7 +24,8 @@ namespace QuanLyNhaHang_DATN.Services.BanService
         }
         public async Task<List<Ban>> GetAvailableBansAsync()
         {
-            var bans = await _banRepository.GetAvailableAsync();
+            //var bans = await _banRepository.GetAvailableAsync();
+            var bans = await _banRepository.GetAllAsync();
             return bans.ToList();
         }
 
@@ -44,10 +45,10 @@ namespace QuanLyNhaHang_DATN.Services.BanService
                     query = query.Where(m => m.KhuVucBanId == filter.KhuVucBanId);
                 }
 
-                if (filter.TrangThai.HasValue)
-                {
-                    query = query.Where(m => (int)m.TrangThai == filter.TrangThai.Value);
-                }
+                //if (filter.TrangThai.HasValue)
+                //{
+                //    query = query.Where(m => (int)m.TrangThai == filter.TrangThai.Value);
+                //}
             }
 
             var total = await query.CountAsync();

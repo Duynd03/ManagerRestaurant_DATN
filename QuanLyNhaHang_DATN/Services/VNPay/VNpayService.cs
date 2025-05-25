@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace QuanLyNhaHang_DATN.Services.VNPay
 {
@@ -16,26 +17,28 @@ namespace QuanLyNhaHang_DATN.Services.VNPay
     {
         private readonly IOptions<VNPayConfig> _vnpayConfig;
         private readonly AppDbContext _context;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        //private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IDistributedCache _cache;
         private readonly ILogger<VNPayService> _logger;
 
-        public VNPayService(IOptions<VNPayConfig> vnpayConfig, AppDbContext context, IHttpContextAccessor httpContextAccessor, ILogger<VNPayService> logger)
+        public VNPayService(IOptions<VNPayConfig> vnpayConfig, AppDbContext context, IDistributedCache cache, ILogger<VNPayService> logger)
         {
             _vnpayConfig = vnpayConfig;
             _context = context;
-            _httpContextAccessor = httpContextAccessor;
+            _cache = cache;
             _logger = logger;
         }
-
-        public async Task<string> CreatePaymentUrl(DatBanViewModel model, HttpContext httpContext)
+        public async Task<string> CreatePaymentUrl(DatBanViewModel model, HttpContext httpContext, string tempTransactionId = null)
         {
-            // Lưu DatBanViewModel vào session
-            httpContext.Session.SetString("DatBanViewModel", JsonSerializer.Serialize(model));
+            tempTransactionId ??= Guid.NewGuid().ToString();
 
-            // Tạo ID tạm
-            var tempTransactionId = Guid.NewGuid().ToString();
+            // Lưu vào Redis
+            var datBanJson = JsonSerializer.Serialize(model);
+            await _cache.SetStringAsync($"TempDatBan:{tempTransactionId}", datBanJson, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+            });
 
-            // Tạo URL thanh toán
             var vnpay = _vnpayConfig.Value;
             var vnp_Amount = (long)(model.CocTien * 100);
             var vnp_OrderInfo = $"Thanh toan tien coc dat ban {tempTransactionId}";
@@ -69,9 +72,9 @@ namespace QuanLyNhaHang_DATN.Services.VNPay
         {
             var vnpay = _vnpayConfig.Value;
             var secureHash = query["vnp_SecureHash"];
+            var tempTransactionId = query["vnp_TxnRef"];
             var inputData = new SortedDictionary<string, string>();
 
-            // Log các tham số nhận được
             _logger.LogInformation("Processing VNPay callback with query: {Query}", query.ToString());
 
             foreach (var (key, value) in query)
@@ -100,11 +103,11 @@ namespace QuanLyNhaHang_DATN.Services.VNPay
                 return (false, null);
             }
 
-            var session = _httpContextAccessor.HttpContext.Session;
-            var datBanJson = session.GetString("DatBanViewModel");
+            // Lấy từ Redis
+            var datBanJson = await _cache.GetStringAsync($"TempDatBan:{tempTransactionId}");
             if (string.IsNullOrEmpty(datBanJson))
             {
-                _logger.LogError("DatBanViewModel not found in session");
+                _logger.LogError("DatBanViewModel not found in Redis for TempTransactionId: {Id}", tempTransactionId);
                 return (false, null);
             }
 
@@ -121,7 +124,8 @@ namespace QuanLyNhaHang_DATN.Services.VNPay
                 IsDatHo = model.IsDatHo,
                 TenLienHe = model.TenLienHe,
                 SDTLienHe = model.SDTLienHe,
-                GhiChu = model.GhiChu
+                GhiChu = model.GhiChu,
+                TrangThai = TrangThaiBanDat.ChoXacNhan
             };
 
             var khachHang = await _context.KhachHangs
@@ -141,14 +145,10 @@ namespace QuanLyNhaHang_DATN.Services.VNPay
 
             _context.DatBans.Add(datBan);
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Saved DatBan with ID: {Id} before update", datBan.Id);
+            _logger.LogInformation("Saved DatBan with ID: {Id}", datBan.Id);
 
-            // Cập nhật trạng thái 
-            datBan.TrangThai = TrangThaiBanDat.ChoXacNhan;
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Updated DatBan with ID: {Id} to TrangThai: {TrangThai}", datBan.Id, datBan.TrangThai);
+            await _cache.RemoveAsync($"TempDatBan:{tempTransactionId}");
 
-            session.Remove("DatBanViewModel");
             return (true, datBan);
         }
 

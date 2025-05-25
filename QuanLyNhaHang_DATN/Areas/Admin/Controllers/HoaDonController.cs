@@ -19,7 +19,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         private readonly IHoaDonService _hoaDonService;
         private readonly IGoiMonService _goiMonService;
         private readonly IMonAnService _monAnService;
-
+        private const decimal VatRate = 0.10m; // Tỷ lệ VAT 10%
         public HoaDonController(
             IHoaDonService hoaDonService,
             IGoiMonService goiMonService,
@@ -77,6 +77,11 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 ? string.Join(", ", hoaDon.DatBan.DatBanBans.Select(dbb => dbb.Ban.TenBan))
                 : "Chưa ghép bàn";
 
+            // Tính thuế VAT động để hiển thị
+            var tienCoc = hoaDon.DatBan?.CocTien ?? 0;
+            var soTienTruocVat = hoaDon.TongTienGoiMon - tienCoc;
+            var thueVat = soTienTruocVat > 0 ? soTienTruocVat * VatRate : 0;
+
             var hoaDonViewModel = new HoaDonViewModel
             {
                 Id = hoaDon.Id,
@@ -88,7 +93,10 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 SDTLienHe = hoaDon.DatBan?.SDTLienHe ?? "",
                 ThoiGianDatBan = hoaDon.DatBan?.ThoiGianDatBan ?? default(DateTime),
                 ThoiGianThanhToan = hoaDon.NgayThanhToan,
-                TongTien = hoaDon.TongTien,
+                TongTienGoiMon = hoaDon.TongTienGoiMon,
+                TienCoc = tienCoc,
+                ThueVat = thueVat, 
+                TongTienThanhToan = hoaDon.TongTienThanhToan,
                 GiamGia = hoaDon.GiamGia,
                 PhuongThucThanhToanDisplay = hoaDon.PhuongThuc.HasValue ? GetEnumDisplayName(hoaDon.PhuongThuc.Value) : "Chưa thanh toán",
                 TrangThaiDisplay = GetEnumDisplayName(hoaDon.TrangThai),
@@ -159,7 +167,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 SDT = hd.DatBan?.KhachHang?.SDT ?? "",
                 TenLienHe = hd.DatBan?.TenLienHe ?? "",
                 SDTLienHe = hd.DatBan?.SDTLienHe ?? "",
-                TongTien = hd.TongTien,
+                TongTienGoiMon = hd.TongTienGoiMon,
                 GiamGia = hd.GiamGia,
                 PhuongThucThanhToanDisplay = hd.PhuongThuc.HasValue ? GetEnumDisplayName(hd.PhuongThuc.Value) : "Chưa thanh toán",
                 TrangThaiDisplay = GetEnumDisplayName(hd.TrangThai)
@@ -175,7 +183,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         {
             var filter = new HoaDonFilterModel
             {
-                TrangThai = TrangThaiHoaDon.ChuaThanhToan
+                TrangThai = TrangThaiHoaDon.DaThanhToan
             };
             var result = await _hoaDonService.GetPagedHoaDonsAsync(pageIndex, pageSize, filter);
             var items = result.Items.Where(hd => hd.TrangThai == TrangThaiHoaDon.DaThanhToan).ToList();
@@ -192,7 +200,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 TenLienHe = hd.DatBan?.TenLienHe ?? "",
                 SDTLienHe = hd.DatBan?.SDTLienHe ?? "",
                 ThoiGianThanhToan = hd.NgayThanhToan,
-                TongTien = hd.TongTien,
+                TongTienGoiMon = hd.TongTienGoiMon,
                 GiamGia = hd.GiamGia,
                 TenNhanVien = hd.NhanVien?.TenNhanVien ?? " ",
                 PhuongThucThanhToanDisplay = hd.PhuongThuc.HasValue ? GetEnumDisplayName(hd.PhuongThuc.Value) : "Chưa thanh toán",
@@ -228,7 +236,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     tenLienHe = hd.DatBan?.TenLienHe ?? "",
                     sDTLienHe = hd.DatBan?.SDTLienHe ?? "",
                     ngayThanhToan = hd.NgayThanhToan != DateTime.MinValue ? hd.NgayThanhToan.ToString("dd/MM/yyyy HH:mm") : "Chưa thanh toán",
-                    tongTien = hd.TongTien,
+                    tongTienGoiMon = hd.TongTienGoiMon,
                     giamGia = hd.GiamGia,
                     phuongThucThanhToanDisplay = hd.PhuongThuc.HasValue ? GetEnumDisplayName(hd.PhuongThuc.Value) : "Chưa thanh toán",
                     trangThaiDisplay = GetEnumDisplayName(hd.TrangThai),
@@ -276,7 +284,8 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 tenLienHe = hd.DatBan?.TenLienHe ?? "",
                 sDTLienHe = hd.DatBan?.SDTLienHe ?? "",
                 ngayThanhToan = hd.NgayThanhToan != DateTime.MinValue ? hd.NgayThanhToan.ToString("dd/MM/yyyy HH:mm") : "Chưa thanh toán",
-                tongTien = hd.TongTien,
+                tongTienGoiMon = hd.TongTienGoiMon,
+                tongTienThanhToan = hd.TongTienThanhToan,
                 giamGia = hd.GiamGia,
                 tenNhanVien = hd.NhanVien?.TenNhanVien ?? " ",
                 phuongThucThanhToanDisplay = hd.PhuongThuc.HasValue ? GetEnumDisplayName(hd.PhuongThuc.Value) : "Chưa thanh toán",

@@ -4,6 +4,6 @@
     {
         public string? TenBan { get; set; }
         public int? KhuVucBanId { get; set; }
-        public int? TrangThai { get; set; }
+        
     }
 }

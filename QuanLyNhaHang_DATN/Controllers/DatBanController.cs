@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Distributed;
 using QuanLyNhaHang_DATN.Hubs;
 using QuanLyNhaHang_DATN.Services.DatBanService;
 using QuanLyNhaHang_DATN.Services.KhachHangService;
 using QuanLyNhaHang_DATN.Services.VNPay;
 using QuanLyNhaHang_DATN.ViewModels;
+using StackExchange.Redis;
+using System.Text.Json;
 
 namespace QuanLyNhaHang_DATN.Controllers
 {
@@ -15,13 +18,15 @@ namespace QuanLyNhaHang_DATN.Controllers
         private readonly IKhachHangService _khachHangService;
         private readonly IVNPayService _vnPayService;
         private readonly IHubContext<DatBanHub> _hubContext;
+        private readonly IDistributedCache _cache;
 
-        public DatBanController(IDatBanService datBanService, IKhachHangService khachHangService, IVNPayService vnPayService, IHubContext<DatBanHub> hubContext)
+        public DatBanController(IDatBanService datBanService, IKhachHangService khachHangService, IVNPayService vnPayService, IHubContext<DatBanHub> hubContext, IDistributedCache cache)
         {
             _datBanService = datBanService;
             _khachHangService = khachHangService;
             _vnPayService = vnPayService;
             _hubContext = hubContext;
+            _cache = cache;
         }
         [HttpGet]
         public IActionResult Create()
@@ -41,21 +46,22 @@ namespace QuanLyNhaHang_DATN.Controllers
                     return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors });
                 }
 
-                var username = User.Identity.IsAuthenticated ? User.Identity.Name : null;
-                var result = await _datBanService.CreateDatBanAsync(datBan, username);
+                var tempTransactionId = Guid.NewGuid().ToString();
 
-                if (!result.Success)
+                // Lưu vào Redis
+                var datBanJson = JsonSerializer.Serialize(datBan);
+                await _cache.SetStringAsync($"TempDatBan:{tempTransactionId}", datBanJson, new DistributedCacheEntryOptions
                 {
-                    return Json(new { success = false, message = result.Message, errors = result.Errors });
-                }
-                // Gửi thông tin đặt bàn qua SignalR đến nhóm Admins
-                await _hubContext.Clients.Group("Admins").SendAsync("ReceiveDatBanUpdate", result.Data);
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+                });
 
-                return Json(new { success = true, message = result.Message, datBanId = result.Data.Id });
+                var paymentUrl = await _vnPayService.CreatePaymentUrl(datBan, HttpContext, tempTransactionId);
+
+                return Json(new { success = true, message = "Vui lòng hoàn tất thanh toán", tempTransactionId, paymentUrl });
             }
             catch (Exception ex)
             {
-                 Console.WriteLine(ex.ToString()); // Ghi log lỗi
+                Console.WriteLine(ex.ToString());
                 return StatusCode(500, new { success = false, message = "Lỗi server", error = ex.Message });
             }
         }
@@ -97,8 +103,15 @@ namespace QuanLyNhaHang_DATN.Controllers
                     return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors });
                 }
 
-                // Gọi VNPayService để tạo URL thanh toán
-                var paymentUrl = await _vnPayService.CreatePaymentUrl(datBan, HttpContext);
+                var tempTransactionId = Guid.NewGuid().ToString();
+
+                var datBanJson = JsonSerializer.Serialize(datBan);
+                await _cache.SetStringAsync($"TempDatBan:{tempTransactionId}", datBanJson, new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+                });
+
+                var paymentUrl = await _vnPayService.CreatePaymentUrl(datBan, HttpContext, tempTransactionId);
 
                 return Json(new { success = true, paymentUrl });
             }
@@ -127,17 +140,61 @@ namespace QuanLyNhaHang_DATN.Controllers
 
                 return RedirectToAction("PaymentFailed", new { message = "Thanh toán không thành công." });
             }
-            await _hubContext.Clients.Group("Admins").SendAsync("ReceiveDatBanUpdate", datBan);
-            await _hubContext.Clients.All.SendAsync("ReceivePaymentNotification", new
+            //await _hubContext.Clients.Group("Admins").SendAsync("ReceiveDatBanUpdate", datBan);
+            //await _hubContext.Clients.All.SendAsync("ReceivePaymentNotification", new
+            //{
+            //    Success = true,
+            //    DatBanId = datBan.Id,
+            //    Message = "Thanh toán thành công"
+            //});
+            //await _hubContext.Clients.Group("Admins").SendAsync("ReceiveDatBanUpdate", new
+            //{
+            //    datBanId = datBan.Id,
+            //    message = $"Bạn có đơn đặt bàn mới Id {datBan.Id}",
+            //    time = DateTime.Now.ToString("HH:mm dd/MM/yyyy")
+            //});
+            var notification = new
             {
-                Success = true,
-                DatBanId = datBan.Id,
-                Message = "Thanh toán thành công"
+                datBanId = datBan.Id,
+                message = $"Bạn có đơn đặt bàn mới Id {datBan.Id}",
+                time = DateTime.Now.ToString("HH:mm dd/MM/yyyy")
+            };
+
+            // Lưu thông báo vào Redis với key chung
+            var notificationKey = "AdminNotifications";
+            var existingNotificationsJson = await _cache.GetStringAsync(notificationKey);
+            var notifications = string.IsNullOrEmpty(existingNotificationsJson)
+                ? new List<object>()
+                : JsonSerializer.Deserialize<List<object>>(existingNotificationsJson);
+            notifications.Add(notification);
+            await _cache.SetStringAsync(notificationKey, JsonSerializer.Serialize(notifications), new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1) // Lưu 1 ngày
             });
+
+            // Gửi thông báo qua SignalR (cho admin đang online)
+            await _hubContext.Clients.Group("Admins").SendAsync("ReceiveDatBanUpdate", notification);
 
             return RedirectToAction("PaymentSuccess", new { datBanId = datBan.Id });
         }
+        [HttpGet]
+        public async Task<IActionResult> GetNotificationsFromRedis()
+        {
+            var notificationKey = "AdminNotifications";
+            var notificationsJson = await _cache.GetStringAsync(notificationKey);
+            var notifications = string.IsNullOrEmpty(notificationsJson)
+                ? new List<object>()
+                : JsonSerializer.Deserialize<List<object>>(notificationsJson);
+            return Json(new { success = true, data = notifications });
+        }
 
+        [HttpPost]
+        public async Task<IActionResult> ClearNotificationsFromRedis()
+        {
+            var notificationKey = "AdminNotifications";
+            await _cache.RemoveAsync(notificationKey);
+            return Json(new { success = true });
+        }
         [HttpGet]
         public IActionResult PaymentSuccess(int datBanId)
         {

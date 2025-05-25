@@ -76,7 +76,7 @@ namespace QuanLyNhaHang_DATN.Services.DashBoardService
                 .ToList();
 
             model.SoHoaDonDaThanhToan = filteredHoaDons.Count;
-            model.DoanhThu = filteredHoaDons.Sum(hd => hd.TongTien);
+            model.DoanhThu = filteredHoaDons.Sum(hd => hd.TongTienGoiMon);
             model.SoLuongKhachHang = filteredHoaDons
                 .Where(hd => hd.DatBan?.KhachHangId != null)
                 .Select(hd => hd.DatBan.KhachHangId)
@@ -113,7 +113,7 @@ namespace QuanLyNhaHang_DATN.Services.DashBoardService
                         var dayEnd = date.AddDays(1).AddTicks(-1);
                         var doanhThu = hoaDons
                             .Where(hd => hd.NgayThanhToan >= date && hd.NgayThanhToan <= dayEnd)
-                            .Sum(hd => hd.TongTien);
+                            .Sum(hd => hd.TongTienGoiMon);
 
                         result.Add(new DoanhThuTheoThoiGian
                         {
@@ -129,7 +129,7 @@ namespace QuanLyNhaHang_DATN.Services.DashBoardService
                         var dayEnd = date.AddDays(1).AddTicks(-1);
                         var doanhThu = hoaDons
                             .Where(hd => hd.NgayThanhToan >= date && hd.NgayThanhToan <= dayEnd)
-                            .Sum(hd => hd.TongTien);
+                            .Sum(hd => hd.TongTienGoiMon);
 
                         result.Add(new DoanhThuTheoThoiGian
                         {
@@ -146,7 +146,7 @@ namespace QuanLyNhaHang_DATN.Services.DashBoardService
                         var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
                         var doanhThu = hoaDons
                             .Where(hd => hd.NgayThanhToan >= monthStart && hd.NgayThanhToan <= monthEnd)
-                            .Sum(hd => hd.TongTien);
+                            .Sum(hd => hd.TongTienGoiMon);
 
                         result.Add(new DoanhThuTheoThoiGian
                         {

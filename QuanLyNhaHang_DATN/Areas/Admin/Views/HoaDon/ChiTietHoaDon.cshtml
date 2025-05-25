@@ -18,19 +18,19 @@
                     <h5 class="mb-3">Thông tin khách hàng</h5>
                     <div class="list-group">
                         <div class="list-group-item">
-                            <strong>Họ và tên khách hàng:</strong> @(Model.TenKhachHang ?? "")
+                            <strong>Họ và tên khách hàng: </strong> @(Model.TenKhachHang ?? "")
                         </div>
                         <div class="list-group-item">
-                            <strong>Số điện thoại:</strong> @(Model.SDT ?? "")
+                            <strong>Số điện thoại: </strong> @(Model.SDT ?? "")
                         </div>
                         <div class="list-group-item">
-                            <strong>Họ và tên liên hệ:</strong> @(Model.TenLienHe ?? "")
+                            <strong>Họ và tên liên hệ: </strong> @(Model.TenLienHe ?? "")
                         </div>
                         <div class="list-group-item">
-                            <strong>Số điện thoại liên hệ:</strong> @(Model.SDTLienHe ?? "")
+                            <strong>Số điện thoại liên hệ: </strong> @(Model.SDTLienHe ?? "")
                         </div>
                         <div class="list-group-item">
-                            <strong>Bàn:</strong> @(Model.Bans ?? "")
+                            <strong>Bàn: </strong> @(Model.Bans ?? "")
                         </div>
                     </div>
                 </div>
@@ -38,10 +38,10 @@
                     <h5 class="mb-3">Thông tin hóa đơn</h5>
                     <div class="list-group">
                         <div class="list-group-item">
-                            <strong>Thời gian đặt bàn:</strong> @(Model.ThoiGianDatBan != default(DateTime) ? Model.ThoiGianDatBan.ToString("dd/MM/yyyy HH:mm") : "<span class='text-muted'>Chưa xác định</span>")
+                            <strong>Thời gian đặt bàn: </strong> @(Model.ThoiGianDatBan != default(DateTime) ? Model.ThoiGianDatBan.ToString("dd/MM/yyyy HH:mm") : " ")
                         </div>
                         <div class="list-group-item">
-                            <strong>Thời gian thanh toán:</strong> @(Model.ThoiGianThanhToan != default(DateTime) ? Model.ThoiGianThanhToan.ToString("dd/MM/yyyy HH:mm") : "<span class='text-muted'>Chưa thanh toán</span>")
+                            <strong>Thời gian thanh toán: </strong> @(Model.ThoiGianThanhToan != default(DateTime) ? Model.ThoiGianThanhToan.ToString("dd/MM/yyyy HH:mm") : " Chưa thanh toán")
                         </div>
                     </div>
                 </div>
@@ -92,7 +92,16 @@
             </div>
             <div class="row mt-4">
                 <div class="col-md-6 offset-md-6 text-end">
-                    <h4 class="text-primary"><strong>Tổng tiền:</strong> @(Model.TongTien > 0 ? Model.TongTien.ToString("N0") + " VNĐ" : "0 VNĐ")</h4>
+                    <h5><strong>Tổng tiền gọi món:</strong> @(Model.TongTienGoiMon > 0 ? Model.TongTienGoiMon.ToString("N0") + " VNĐ" : "0 VNĐ")</h5>
+                    <h5><strong>Tiền cọc:</strong> @(Model.TienCoc > 0 ? "-" + Model.TienCoc.ToString("N0") + " VNĐ" : "0 VNĐ")</h5>
+                    <hr style="border: 1px dashed #000; width: 50%; margin-left: auto;" />
+                    @{
+                        var soTienTruocVat = Model.TongTienGoiMon - (Model.TienCoc);
+                    }
+                    <h5><strong>Số tiền trước thuế:</strong> @(soTienTruocVat > 0 ? soTienTruocVat.ToString("N0") + " VNĐ" : "0 VNĐ")</h5>
+                    <h5><strong>Thuế VAT (10%):</strong> @(Model.ThueVat > 0 ? "+" + Model.ThueVat.ToString("N0") + " VNĐ" : "0 VNĐ")</h5>
+                    <hr style="border: 1px dashed #000; width: 50%; margin-left: auto;" />
+                    <h4 class="text-primary"><strong>Tổng tiền thanh toán:</strong> @(Model.TongTienThanhToan > 0 ? Model.TongTienThanhToan.ToString("N0") + " VNĐ" : "0 VNĐ")</h4>
                 </div>
             </div>
             <div class="mt-4">

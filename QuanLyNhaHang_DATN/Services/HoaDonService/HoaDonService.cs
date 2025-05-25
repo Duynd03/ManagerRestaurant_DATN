@@ -13,6 +13,7 @@ namespace QuanLyNhaHang_DATN.Services.HoaDonService
         private readonly IHoaDonRepository _hoaDonRepository;
         private readonly IGoiMonRepository _goiMonRepository;
         private readonly IDatBanService _datBanService;
+        private const decimal VatRate = 0.10m; // Tỷ lệ VAT 10%
         public HoaDonService(
             AppDbContext context,
             IHoaDonRepository repository,
@@ -40,13 +41,23 @@ namespace QuanLyNhaHang_DATN.Services.HoaDonService
                 throw new InvalidOperationException("Đặt bàn không tồn tại.");
             }
 
-            var tongTien = await _goiMonRepository.CalculateTongTienByDatBanIdAsync(datBanId);
+            // Tính tổng tiền món ăn từ GoiMon
+            var tongTienGoiMon = await _goiMonRepository.CalculateTongTienByDatBanIdAsync(datBanId);
+            var tienCoc = datBan.CocTien; // Tiền cọc từ DatBan
+
+            // Tính thuế VAT: (Tổng tiền món ăn - Tiền cọc) * Tỷ lệ VAT
+            var soTienTruocVat = tongTienGoiMon - tienCoc;
+            var thueVat = soTienTruocVat > 0 ? soTienTruocVat * VatRate : 0; // Chỉ tính VAT nếu số tiền trước VAT > 0
+
+            // Tính tổng tiền thanh toán: (Tổng tiền món ăn - Tiền cọc) + Thuế VAT
+            var tongTienThanhToan = soTienTruocVat + thueVat;
 
             var hoaDon = new HoaDon
             {
                 DatBanId = datBanId,
                 MaHoaDon = GenerateMaHoaDon(datBanId),
-                TongTien = tongTien,
+                TongTienGoiMon = tongTienGoiMon, // Gán tổng tiền gọi món ban đầu
+                TongTienThanhToan = tongTienThanhToan, // Thêm tổng tiền thanh toán
                 TrangThai = TrangThaiHoaDon.ChuaThanhToan,
             };
 
@@ -68,11 +79,17 @@ namespace QuanLyNhaHang_DATN.Services.HoaDonService
             {
                 throw new InvalidOperationException("Hóa đơn đã được thanh toán.");
             }
+            // Kiểm tra lại tổng tiền thanh toán trước khi xác nhận
+            var tienCoc = hoaDon.DatBan?.CocTien ?? 0;
+            var soTienTruocVat = hoaDon.TongTienGoiMon - tienCoc;
+            var thueVat = soTienTruocVat > 0 ? soTienTruocVat * VatRate : 0;
+            var tongTienThanhToan = soTienTruocVat + thueVat;
 
             hoaDon.TrangThai = TrangThaiHoaDon.DaThanhToan;
             hoaDon.PhuongThuc = phuongThuc;
             hoaDon.NgayThanhToan = DateTime.Now;
             hoaDon.NhanVienId = nhanVienId;
+          
             // Gọi DatBanService để cập nhật trạng thái DatBan và BanSchedule
             await _datBanService.UpdateBanSauThanhToanAsync(hoaDon.DatBanId, DateTime.Now);
             await _repository.UpdateAsync(hoaDon);

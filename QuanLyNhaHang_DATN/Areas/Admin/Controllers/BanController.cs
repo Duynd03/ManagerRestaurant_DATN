@@ -29,7 +29,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
             {
                 TenBan = tenBan,
                 KhuVucBanId = khuVucBanId,
-                TrangThai = trangThai
+               
             };
             var result = await _banService.GetPagedAsync(pageIndex, pageSize, filter);
             var khuVucBans = await _khuVucBanService.GetAllAsync();
@@ -43,25 +43,25 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
             return View(result.Items);
         }
-        private string GetEnumDisplayName(TrangThaiBan value)
-        {
-            // Lấy thuộc tính [Display(Name="...")]
-            var memberInfo = value.GetType().GetMember(value.ToString());
-            if (memberInfo != null && memberInfo.Length > 0)
-            {
-                var attrs = memberInfo[0].GetCustomAttributes(typeof(DisplayAttribute), false);
-                if (attrs != null && attrs.Length > 0)
-                    return ((DisplayAttribute)attrs[0]).Name;
-            }
-            return value.ToString();
-        }
-        public async Task<IActionResult> GetPagedData(int pageIndex = 1, int pageSize = 5, string? tenBan = null, int? khuVucBanId = null, int? trangThai = null)
+        //private string GetEnumDisplayName(TrangThaiBan value)
+        //{
+        //    // Lấy thuộc tính [Display(Name="...")]
+        //    var memberInfo = value.GetType().GetMember(value.ToString());
+        //    if (memberInfo != null && memberInfo.Length > 0)
+        //    {
+        //        var attrs = memberInfo[0].GetCustomAttributes(typeof(DisplayAttribute), false);
+        //        if (attrs != null && attrs.Length > 0)
+        //            return ((DisplayAttribute)attrs[0]).Name;
+        //    }
+        //    return value.ToString();
+        //}
+        public async Task<IActionResult> GetPagedData(int pageIndex = 1, int pageSize = 5, string? tenBan = null, int? khuVucBanId = null)
         {
             var filter = new BanFilterModel
             {
                 TenBan = tenBan,
-                KhuVucBanId = khuVucBanId,
-                TrangThai = trangThai
+                KhuVucBanId = khuVucBanId
+              
             };
 
             var result = await _banService.GetPagedAsync(pageIndex, pageSize, filter);
@@ -71,8 +71,8 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 Id = item.Id,
                 TenBan = item.TenBan,
                 TenKhuVucBan = item.KhuVucBan?.TenKhuVuc,
-                TrangThaiDisplay = GetEnumDisplayName(item.TrangThai),
-                TrangThaiValue = (int)item.TrangThai // Thêm giá trị số của TrangThai
+                //TrangThaiDisplay = GetEnumDisplayName(item.TrangThai),
+                //TrangThaiValue = (int)item.TrangThai // Thêm giá trị số của TrangThai
             });
 
             return Json(new
@@ -88,15 +88,15 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         {
             var khuVucBans = await _khuVucBanService.GetAllAsync();
             ViewBag.KhuVucBans = new SelectList(khuVucBans, "Id", "TenKhuVuc");
-            var trangThaiList = Enum.GetValues(typeof(TrangThaiBan))
-                .Cast<TrangThaiBan>()
-                .Select(e => new SelectListItem
-                {
-                    Value = ((int)e).ToString(),
-                    Text = GetEnumDisplayName(e)
-                })
-            .ToList();
-            ViewBag.TrangThaiList = trangThaiList;
+            //var trangThaiList = Enum.GetValues(typeof(TrangThaiBan))
+            //    .Cast<TrangThaiBan>()
+            //    .Select(e => new SelectListItem
+            //    {
+            //        Value = ((int)e).ToString(),
+            //        Text = GetEnumDisplayName(e)
+            //    })
+            //.ToList();
+            //ViewBag.TrangThaiList = trangThaiList;
             return PartialView("_CreatePartial", new Ban());
         }
         [HttpPost]
@@ -128,15 +128,15 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
             ViewBag.KhuVucBans = await _khuVucBanService.GetAllAsync();
 
-            var trangThaiList = Enum.GetValues(typeof(TrangThaiBan))
-                .Cast<TrangThaiBan>()
-                .Select(e => new SelectListItem
-                {
-                    Value = ((int)e).ToString(),
-                    Text = GetEnumDisplayName(e)
-                })
-                .ToList();
-            ViewBag.TrangThaiList = trangThaiList;
+            //var trangThaiList = Enum.GetValues(typeof(TrangThaiBan))
+            //    .Cast<TrangThaiBan>()
+            //    .Select(e => new SelectListItem
+            //    {
+            //        Value = ((int)e).ToString(),
+            //        Text = GetEnumDisplayName(e)
+            //    })
+            //    .ToList();
+            //ViewBag.TrangThaiList = trangThaiList;
             return PartialView("_EditPartial", ban);
         }
         [HttpPost]
@@ -156,7 +156,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
                 existing.TenBan = ban.TenBan;
                 existing.KhuVucBanId = ban.KhuVucBanId;
-                existing.TrangThai = ban.TrangThai;
+                //existing.TrangThai = ban.TrangThai;
                 await _banService.UpdateAsync(existing);
                 return Json(new { success = true, message = "Cập nhật Bàn thành công" });
             }

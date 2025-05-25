@@ -16,7 +16,7 @@ namespace QuanLyNhaHang_DATN.Repositories.BanRepository
         public async Task<IEnumerable<Ban>> GetAvailableAsync()
         {
             return await _dbSet
-                .Where(m => m.TrangThai == TrangThaiBan.Trong)
+                //.Where(m => m.TrangThai == TrangThaiBan.Trong)
                 .Include(m => m.KhuVucBan)
                 .ToListAsync();
         }

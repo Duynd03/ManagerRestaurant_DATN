@@ -6,6 +6,7 @@ using QuanLyNhaHang_DATN.Models;
 using QuanLyNhaHang_DATN.Hubs;
 using System.Net;
 using QuanLyNhaHang_DATN.Config;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.

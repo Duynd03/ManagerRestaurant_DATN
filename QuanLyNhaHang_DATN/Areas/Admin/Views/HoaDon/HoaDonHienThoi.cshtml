@@ -51,7 +51,7 @@
                             <th>Tên khách hàng</th>
                             <th>Số điện thoại</th>
                             <th>Bàn</th>
-                            <th>Tổng tiền</th>
+                            <th>Tổng tiền gọi món</th>
                            
                             <th>Trạng thái</th>
                             <th>Thao tác</th>
@@ -104,7 +104,7 @@
                                                 <td>${item.tenKhachHang || ''}</td>
                                                 <td>${item.sdt || ''}</td>
                                                 <td>${item.bans || 'Không có bàn'}</td>
-                                                <td>${item.tongTien ? item.tongTien.toLocaleString() + ' VNĐ' : '0 VNĐ'}</td>
+                                                <td>${item.tongTienGoiMon ? item.tongTienGoiMon.toLocaleString() + ' VNĐ' : '0 VNĐ'}</td>
                                                 
                                                 <td><span class="badge ${item.trangThaiDisplay === 'Chưa thanh toán' ? 'bg-warning' : 'bg-success'}">${item.trangThaiDisplay || ''}</span></td>
                                                 <td>

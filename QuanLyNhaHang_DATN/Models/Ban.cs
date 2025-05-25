@@ -13,8 +13,7 @@ namespace QuanLyNhaHang_DATN.Models
         public string TenBan { get; set; }
         [Required(ErrorMessage = "Khu vực bàn là bắt buộc")]
         public int KhuVucBanId { get; set; }
-        [Required(ErrorMessage = "Trạng thái bàn là bắt buộc")]
-        public TrangThaiBan TrangThai { get; set; } 
+        
 
         [ForeignKey("KhuVucBanId")]
         [ValidateNever]
