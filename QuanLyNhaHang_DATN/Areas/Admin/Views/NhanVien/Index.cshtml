@@ -1,0 +1,377 @@
+﻿@model IEnumerable<QuanLyNhaHang_DATN.Models.NhanVien>
+@{
+    ViewData["Title"] = "Quản lý nhân viên";
+    Layout = "~/Areas/Admin/Views/Shared/_layoutAdmin.cshtml";
+    var quyenList = ViewBag.QuyenList as List<QuanLyNhaHang_DATN.Models.Quyen>;
+    int? selectedQuyenId = ViewBag.SelectedQuyenId;
+    string searchTenNhanVien = ViewBag.SearchTenNhanVien as string;
+}
+
+<div class="col-md-12">
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex align-items-center">
+                <h4 class="card-title me-auto">Danh sách nhân viên</h4>
+                <button id="btnSearch" class="btn btn-secondary btn-round me-2" onclick="showSearchForm()">
+                    <i class="fa fa-search"></i> Tìm kiếm
+                </button>
+                <button id="btnCreate" class="btn btn-primary btn-round" data-bs-toggle="modal" data-bs-target="#createModal">
+                    <i class="fa fa-plus"></i> Thêm nhân viên
+                </button>
+            </div>
+        </div>
+
+        <div id="searchFormContainer" class="card p-3 mb-3" style="display: none;">
+            <form id="searchForm">
+                <div class="mb-3">
+                    <label for="tenNhanVien" class="form-label">Tên nhân viên</label>
+                    <input type="text" name="tenNhanVien" class="form-control" value="@searchTenNhanVien" placeholder="Nhập tên nhân viên" />
+                </div>
+                <div class="mb-3">
+                    <label for="quyenId" class="form-label">Quyền</label>
+                    <select name="quyenId" class="form-select">
+                        <option value="">-- Tất cả --</option>
+                        @foreach (var quyen in quyenList)
+                        {
+                            <option value="@quyen.Id" @(selectedQuyenId == quyen.Id ? "selected" : "")>@quyen.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" onclick="searchData()">
+                        <i class="bi bi-search"></i> Tìm kiếm
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="hideSearchForm()">
+                        <i class="bi bi-x-circle"></i> Đóng
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-body">
+            <div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content" id="createModalContent"></div>
+                </div>
+            </div>
+            <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content" id="editModalContent"></div>
+                </div>
+            </div>
+            <div class="modal fade" id="changePasswordModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content" id="changePasswordModalContent"></div>
+                </div>
+            </div>
+
+            <div class="table-responsive" style="overflow-x: auto;">
+                <table id="nhanVienTable" class="table table-striped table-hover" style="min-width: 1500px;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên nhân viên</th>
+                            <th>Số điện thoại</th>
+                            <th>Ngày sinh</th>
+                            <th>Địa chỉ</th>
+                            <th>Tên tài khoản</th>
+                            <th>Quyền</th>
+                            <th>Trạng thái</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center">Không có nhân viên nào</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>@item.Id</td>
+                                    <td>@item.TenNhanVien</td>
+                                    <td>@item.Sdt</td>
+                                    <td>@(item.NgaySinh?.ToString("dd/MM/yyyy") ?? "Không xác định")</td>
+                                    <td>@item.DiaChi</td>
+                                    <td>@(item.TaiKhoan?.UserName ?? "N/A")</td>
+                                    <td>@(item.TaiKhoan?.Quyen?.Name ?? "N/A")</td>
+                                    <td><span class="badge bg-info">Đang hoạt động</span></td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-warning editBtn" data-id="@item.Id">Cập nhật</button>
+                                        <button class="btn btn-sm btn-info changePasswordBtn" data-taiKhoanId="@item.TaiKhoanId">Đổi mật khẩu</button>
+                                        <button class="btn btn-sm btn-danger deleteBtn" data-taiKhoanId="@item.TaiKhoanId">Khóa</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+                <div id="paginationContainer" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            let currentPageIndex = @ViewBag.PageIndex;
+            let currentPageSize = @ViewBag.PageSize;
+
+            window.loadData = function (pageIndex = currentPageIndex, pageSize = currentPageSize) {
+                let tenNhanVien = $("input[name='tenNhanVien']").val() || '';
+                let quyenId = $("select[name='quyenId']").val() || '';
+
+                $.get("/Admin/NhanVien/GetPagedData", {
+                    pageIndex: pageIndex,
+                    pageSize: pageSize,
+                    tenNhanVien: tenNhanVien,
+                    quyenId: quyenId
+                }, function (response) {
+                    console.log("Dữ liệu từ server:", response.items); // Debug
+                    updateTable(response.items);
+                    updatePagination(response.totalCount, response.pageIndex, response.pageSize);
+                    currentPageIndex = pageIndex;
+                    currentPageSize = pageSize;
+                }).fail(function () {
+                    alert("Không thể tải dữ liệu. Vui lòng thử lại.");
+                });
+            }
+
+            window.searchData = function () {
+                loadData(1, currentPageSize);
+                hideSearchForm();
+            }
+
+            function updateTable(items) {
+                let html = '';
+                if (items.length === 0) {
+                    html = '<tr><td colspan="9" class="text-center">Không có nhân viên nào.</td></tr>';
+                } else {
+                    items.forEach(function (item) {
+                        html += `<tr>
+                                    <td>${item.id}</td>
+                                    <td>${item.tenNhanVien || ''}</td>
+                                    <td>${item.sdt || ''}</td>
+                                    <td>${item.ngaySinh || ''}</td>
+                                    <td>${item.diaChi || ''}</td>
+                                    <td>${item.username || ''}</td>
+                                    <td>${item.quyen || ''}</td>
+                                            <td><span class="badge bg-success">${item.trangThaiDisplay || 'Đang hoạt động'}</span></td>
+                                    <td>
+                                            <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-warning editBtn" data-id="${item.id || ''}">Cập nhật</button>
+                                        <button class="btn btn-sm btn-info changePasswordBtn" data-taiKhoanId="${item.taiKhoanId || ''}">Đổi mật khẩu</button>
+                                        <button class="btn btn-sm btn-danger deleteBtn" data-taiKhoanId="${item.taiKhoanId || ''}">Khóa</button>
+                                                </div>
+                                    </td>
+                                </tr>`;
+                    });
+                }
+                $("#nhanVienTable tbody").html(html); // Chỉ cập nhật tbody
+            }
+
+            function updatePagination(totalCount, pageIndex, pageSize) {
+                let totalPages = Math.ceil(totalCount / pageSize);
+                let paginationHtml = '<nav><ul class="pagination">';
+
+                if (pageIndex > 1) {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${pageIndex - 1}, ${pageSize}); return false;">Trước</a></li>`;
+                } else {
+                    paginationHtml += '<li class="page-item disabled"><span class="page-link">Trước</span></li>';
+                }
+
+                for (let i = 1; i <= totalPages; i++) {
+                    if (i === pageIndex) {
+                        paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                    } else {
+                        paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${i}, ${pageSize}); return false;">${i}</a></li>`;
+                    }
+                }
+
+                if (pageIndex < totalPages) {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadData(${pageIndex + 1}, ${pageSize}); return false;">Sau</a></li>`;
+                } else {
+                    paginationHtml += '<li class="page-item disabled"><span class="page-link">Sau</span></li>';
+                }
+
+                paginationHtml += '</ul></nav>';
+                $("#paginationContainer").html(paginationHtml);
+            }
+
+            window.showSearchForm = function () {
+                document.getElementById('searchFormContainer').style.display = 'block';
+            }
+
+            window.hideSearchForm = function () {
+                document.getElementById('searchFormContainer').style.display = 'none';
+            }
+
+            $("#btnCreate").click(function (e) {
+                e.preventDefault();
+                $.ajax({
+                    url: "/Admin/NhanVien/Create",
+                    type: "GET",
+                    success: function (data) {
+                        $("#createModalContent").html(data);
+                        $.validator.unobtrusive.parse("#createForm");
+                        $("#createModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Không thể tải form thêm nhân viên.");
+                    }
+                });
+            });
+
+            $(document).on("submit", "#createForm", function (e) {
+                e.preventDefault();
+                let $form = $(this);
+                if (!$form.valid()) return;
+
+                let formData = new FormData($form[0]);
+
+                $.ajax({
+                    url: "/Admin/NhanVien/Create",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        if (response.success) {
+                            $("#createModal").modal("hide");
+                            loadData(currentPageIndex, currentPageSize);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi gửi yêu cầu.");
+                    }
+                });
+            });
+
+            $(document).on("click", ".editBtn", function (e) {
+                e.preventDefault();
+                let id = $(this).data("id");
+                $.ajax({
+                    url: "/Admin/NhanVien/Edit/" + id,
+                    type: "GET",
+                    success: function (data) {
+                        $("#editModalContent").html(data);
+                        $.validator.unobtrusive.parse("#editForm");
+                        $("#editModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Không thể tải form chỉnh sửa nhân viên.");
+                    }
+                });
+            });
+
+            $(document).on("submit", "#editForm", function (e) {
+                e.preventDefault();
+                let $form = $(this);
+                if (!$form.valid()) return;
+
+                let formData = new FormData($form[0]);
+
+                $.ajax({
+                    url: "/Admin/NhanVien/Edit",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        if (response.success) {
+                            $("#editModal").modal("hide");
+                            loadData(currentPageIndex, currentPageSize);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi gửi yêu cầu.");
+                    }
+                });
+            });
+
+            $(document).on("click", ".changePasswordBtn", function (e) {
+                e.preventDefault();
+                let taiKhoanId = $(this).data("taikhoanid");
+                $.ajax({
+                    url: "/Admin/NhanVien/ChangePassword/" + taiKhoanId,
+                    type: "GET",
+                    success: function (data) {
+                        $("#changePasswordModalContent").html(data);
+                        $.validator.unobtrusive.parse("#changePasswordForm");
+                        $("#changePasswordModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Không thể tải form đổi mật khẩu.");
+                    }
+                });
+            });
+
+            $(document).on("submit", "#changePasswordForm", function (e) {
+                e.preventDefault();
+                let $form = $(this);
+                if (!$form.valid()) return;
+
+                let formData = new FormData($form[0]);
+
+                $.ajax({
+                    url: "/Admin/NhanVien/ChangePassword",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        if (response.success) {
+                            $("#changePasswordModal").modal("hide");
+                            loadData(currentPageIndex, currentPageSize);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi gửi yêu cầu.");
+                    }
+                });
+            });
+
+            $(document).on("click", ".deleteBtn", function () {
+                if (!confirm("Bạn có chắc muốn khóa tài khoản này?")) return;
+                const taiKhoanId = $(this).data("taikhoanid");
+
+                $.ajax({
+                    type: "POST",
+                    url: "/Admin/NhanVien/Delete",
+                    data: { taiKhoanId: taiKhoanId },
+                    success: function (res) {
+                        if (res.success) {
+                            loadData(currentPageIndex, currentPageSize);
+                            alert(res.message);
+                        } else {
+                            alert(res.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi gửi yêu cầu.");
+                    }
+                });
+            });
+
+            loadData();
+        });
+    </script>
+}

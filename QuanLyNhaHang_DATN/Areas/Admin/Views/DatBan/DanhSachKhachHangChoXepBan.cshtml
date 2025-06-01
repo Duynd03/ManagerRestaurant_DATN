@@ -10,13 +10,13 @@
             <div class="d-flex align-items-center">
                 <h4 class="card-title me-auto">Danh sách khách hàng chờ xếp bàn</h4>
 
-                <button id="btnSearch" class="btn btn-secondary btn-round me-2" onclick="showSearchForm()">
+                <button id="btnSearch" class="btn btn-secondary btn-round me-3" onclick="showSearchForm()">
                     <i class="fa fa-search"></i> Tìm kiếm
                 </button>
 
-                <a id="btnCreate" class="btn btn-primary btn-round" href="@Url.Action("Create", "DatBan", new { area = "Admin" })">
+                <button id="btnCreate" class="btn btn-primary btn-round" data-bs-toggle="modal" data-bs-target="#createModal">
                     <i class="fa fa-plus"></i> Tạo đơn đặt bàn
-                </a>
+                </button>
             </div>
         </div>
 
@@ -47,8 +47,8 @@
         <div class="card-body">
             <!-- Danh sách khách hàng chờ xếp bàn -->
             <div class="table-responsive">
-                <div id="datBanList">
-                    <table class="table table-bordered table-striped">
+               
+                    <table id="datBanList" class="table  table-striped table-hover" style="min-width: 1500px;">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -77,9 +77,14 @@
                                         <td>@item.CocTien</td>
                                         <td>@item.TenLienHe</td>
                                         <td>@item.SDTLienHe</td>
-                                        <td>@item.TrangThaiDisplay</td>
                                         <td>
+                                        <span class="badge bg-warning">@item.TrangThaiDisplay</span>
+                                            </td>
+                                        <td>
+                                            <div class="d-flex gap-2">
                                             <a class="btn btn-sm btn-success xepBanBtn" href="@Url.Action("DanhSachBanTrong", "DatBan", new { area = "Admin", datBanId = item.Id })">Xếp bàn</a>
+                                            <a class="btn btn-sm btn-warning">Cập nhật</a>
+                                            </div>
                                         </td>
                                     </tr>
                                 }
@@ -98,7 +103,7 @@
                     <!-- Pagination sẽ được cập nhật bằng AJAX -->
                 </div>
             </div>
-        </div>
+       
     </div>
 </div>
 
@@ -155,9 +160,12 @@
                                             <td>${item.cocTien}</td>
                                             <td>${item.tenLienHe || ""}</td>
                                             <td>${item.sdtLienHe || ""}</td>
-                                            <td>${item.trangThaiDisplay}</td>
+                                            <td><span class="badge bg-info">${item.trangThaiDisplay}</span></td>
                                             <td>
-                                                <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/DanhSachBanTrong?datBanId=${item.id}">Xếp bàn</a>
+                                                    <div class="d-flex gap-2">
+                                                             <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/DanhSachBanTrong?datBanId=${item.id}">Xếp bàn</a>
+                                                 <a class="btn btn-sm btn-warning">Cập nhật</a>
+                                                 </div>
                                             </td>
                                         </tr>`;
                     });

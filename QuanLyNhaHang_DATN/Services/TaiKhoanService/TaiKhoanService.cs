@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using QuanLyNhaHang_DATN.Common;
 using QuanLyNhaHang_DATN.Data;
 using QuanLyNhaHang_DATN.Models;
@@ -212,6 +213,13 @@ namespace QuanLyNhaHang_DATN.Services.TaiKhoanService
 
             // Bước 5: Trả về kết quả thành công
             return new Result<TaiKhoan>(true, "Tạo tài khoản thành công.", taiKhoan);
+        }
+
+        public async Task<List<Quyen>> GetAllQuyenAsync()
+        {
+            return await _context.Quyens
+                .Where(q => q.Id == 1 || q.Id == 2 || q.Id == 3) //lấy quyền Quản lý, Nhân viên phục vụ, Kế toán
+                .ToListAsync();
         }
     }
 }

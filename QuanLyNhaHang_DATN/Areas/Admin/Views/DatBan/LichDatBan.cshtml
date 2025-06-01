@@ -46,7 +46,7 @@
 
         <div class="card-body">
             <div class="table-responsive">
-                <table id="xepBanTable" class="table table-striped table-hover">
+                    <table id="xepBanTable" class="table  table-striped table-hover" style="min-width: 1500px;">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -87,10 +87,12 @@
                                         <span class="badge bg-info">@item.TrangThaiDisplay</span>
                                     </td>
                                     <td>
+                                        <div class="d-flex gap-2">
                                         <a href="/Admin/GoiMon/Index?datBanId=@item.Id" class="btn btn-primary btn-sm">Gọi món</a>
                                         <!-- Chuyển hướng trực tiếp đến DanhSachBanTrong với isChuyenBan=true -->
                                         <a href="/Admin/DatBan/DanhSachBanTrong?datBanId=@item.Id&isChuyenBan=true" class="btn btn-warning btn-sm">Chuyển bàn</a>
                                         <button class="btn btn-danger btn-sm btn-huy-ban" data-id="@item.Id">Hủy</button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -160,9 +162,11 @@
                                             <td>${item.tenNhanVien || ''}</td>
                                             <td><span class="badge bg-info">${item.trangThaiDisplay}</span></td>
                                             <td>
+                                                 <div class="d-flex gap-2">
                                                 <a href="/Admin/GoiMon/Index?datBanId=${item.id}" class="btn btn-primary btn-sm">Gọi món</a>
                                                 <a href="/Admin/DatBan/DanhSachBanTrong?datBanId=${item.id}&isChuyenBan=true" class="btn btn-warning btn-sm">Chuyển bàn</a>
                                                 <button class="btn btn-danger btn-sm btn-huy-ban" data-id="${item.id}">Hủy</button>
+                                                </div>
                                             </td>
                                         </tr>`;
                     });

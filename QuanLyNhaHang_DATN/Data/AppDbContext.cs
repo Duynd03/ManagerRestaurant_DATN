@@ -20,8 +20,7 @@ namespace QuanLyNhaHang_DATN.Data
         public DbSet<NhanVien> NhanViens { get; set; }
         public DbSet<TaiKhoan> TaiKhoans { get; set; }
         public DbSet<Quyen> Quyens { get; set; }
-        public DbSet<ChucNang> ChucNangs { get; set; }
-        public DbSet<Quyen_ChucNang> Quyen_ChucNangs { get; set; }
+       
         public DbSet<HoaDon> HoaDons { get; set; }
         public DbSet<GoiMon> GoiMons { get; set; }
         public DbSet<DatBan_Ban> DatBan_Bans { get; set; }
@@ -43,8 +42,7 @@ namespace QuanLyNhaHang_DATN.Data
             builder.Entity<DatBan>().ToTable("DatBan");
             builder.Entity<KhachHang>().ToTable("KhachHang");
             builder.Entity<NhanVien>().ToTable("NhanVien");
-            builder.Entity<ChucNang>().ToTable("ChucNang");
-            builder.Entity<Quyen_ChucNang>().ToTable("Quyen_ChucNang");
+          
             builder.Entity<HoaDon>().ToTable("HoaDon");
             builder.Entity<GoiMon>().ToTable("GoiMon");
             builder.Entity<DatBan_Ban>().ToTable("DatBan_Ban");

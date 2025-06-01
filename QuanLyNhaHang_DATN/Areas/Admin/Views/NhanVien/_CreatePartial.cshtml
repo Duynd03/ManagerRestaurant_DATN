@@ -1,0 +1,67 @@
+﻿@model QuanLyNhaHang_DATN.ViewModels.NhanVienViewModel
+@{
+    var quyenList = ViewBag.QuyenList as List<QuanLyNhaHang_DATN.Models.Quyen>;
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Thêm nhân viên</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <form id="createForm" asp-action="Create" asp-controller="NhanVien" method="post" data-ajax="true" data-ajax-method="POST">
+        @Html.AntiForgeryToken()
+        <div class="mb-3">
+            <label asp-for="TenNhanVien" class="form-label">Tên nhân viên</label>
+            <input asp-for="TenNhanVien" class="form-control" required />
+            <span asp-validation-for="TenNhanVien" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Sdt" class="form-label">Số điện thoại</label>
+            <input asp-for="Sdt" class="form-control" required pattern="\d{10}" title="Số điện thoại phải có đúng 10 chữ số" />
+            <span asp-validation-for="Sdt" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="NgaySinh" class="form-label">Ngày sinh</label>
+            <input asp-for="NgaySinh" class="form-control" type="date" />
+            <span asp-validation-for="NgaySinh" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="DiaChi" class="form-label">Địa chỉ</label>
+            <input asp-for="DiaChi" class="form-control" />
+            <span asp-validation-for="DiaChi" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Username" class="form-label">Tên tài khoản</label>
+            <input asp-for="Username" class="form-control" required />
+            <span asp-validation-for="Username" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Password" class="form-label">Mật khẩu</label>
+            <input asp-for="Password" class="form-control" type="password" required />
+            <span asp-validation-for="Password" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="QuyenId" class="form-label">Quyền</label>
+            <select asp-for="QuyenId" class="form-select" required>
+                <option value="">-- Chọn quyền --</option>
+                @foreach (var quyen in quyenList)
+                {
+                    <option value="@quyen.Id">@quyen.Name</option>
+                }
+            </select>
+            <span asp-validation-for="QuyenId" class="text-danger"></span>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            <button type="submit" class="btn btn-primary">Lưu</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $.validator.unobtrusive.parse("#createForm");
+        });
+    </script>
+}

@@ -1,4 +1,6 @@
-﻿using QuanLyNhaHang_DATN.Common;
+﻿using Microsoft.EntityFrameworkCore;
+using QuanLyNhaHang_DATN.Areas.Admin.ViewModels;
+using QuanLyNhaHang_DATN.Common;
 using QuanLyNhaHang_DATN.Data;
 using QuanLyNhaHang_DATN.Models;
 using QuanLyNhaHang_DATN.Repositories.NhanVienRepository;
@@ -58,6 +60,48 @@ namespace QuanLyNhaHang_DATN.Services.NhanVienService
             await AddAsync(nhanVien);
 
             return new Result<NhanVien>(true, "Tạo thông tin nhân viên thành công.", nhanVien);
+        }
+
+        public async Task<(IEnumerable<NhanVien> Items, int TotalCount)> GetPagedAsync(int pageIndex, int pageSize, NhanVienFilterModel filter)
+        {
+            IQueryable<NhanVien> query = _context.NhanViens
+        .Include(nv => nv.TaiKhoan)
+        .ThenInclude(tk => tk.Quyen)
+        .Where(nv => nv.TaiKhoan != null
+            && (nv.TaiKhoan.QuyenId == 1 || nv.TaiKhoan.QuyenId == 2 || nv.TaiKhoan.QuyenId == 3)
+            && nv.TaiKhoan.TrangThai == TrangThaiTaiKhoan.DangHoatDong);
+
+            if (filter != null)
+            {
+                if (!string.IsNullOrWhiteSpace(filter.TenNhanVien))
+                {
+                    query = query.Where(nv => nv.TenNhanVien.Contains(filter.TenNhanVien));
+                }
+
+                if (filter.QuyenId.HasValue)
+                {
+                    query = query.Where(nv => nv.TaiKhoan.QuyenId == filter.QuyenId.Value);
+                }
+
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderBy(nv => nv.Id)
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+        public async Task<NhanVien> GetByIdAsync(int id)
+        {
+            return await _context.NhanViens
+                .Include(nv => nv.TaiKhoan)
+                .ThenInclude(tk => tk.Quyen)
+                .FirstOrDefaultAsync(nv => nv.Id == id);
         }
     }
 }
