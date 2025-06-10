@@ -226,6 +226,9 @@ namespace QuanLyNhaHang_DATN.Migrations
                     b.Property<int>("Loai")
                         .HasColumnType("int");
 
+                    b.Property<string>("LyDoHuy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("NhanVienId")
                         .HasColumnType("int");
 
@@ -291,6 +294,9 @@ namespace QuanLyNhaHang_DATN.Migrations
 
                     b.Property<decimal>("Gia")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("LanGoiMon")
+                        .HasColumnType("int");
 
                     b.Property<int>("MonAnId")
                         .HasColumnType("int");

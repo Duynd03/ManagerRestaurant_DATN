@@ -28,7 +28,7 @@ namespace QuanLyNhaHang_DATN.Services.GoiMonService
             return (items, total);
         }
 
-        public async Task SaveGoiMonListAsync(int datBanId, List<GoiMon> goiMonList)
+        public async Task SaveGoiMonListAsync(int datBanId, List<GoiMon> goiMonList, int lanGoiMon)
         {
             if (goiMonList == null || !goiMonList.Any())
             {
@@ -39,17 +39,33 @@ namespace QuanLyNhaHang_DATN.Services.GoiMonService
             {
                 throw new InvalidOperationException($"Đặt bàn với ID = {datBanId} không tồn tại.");
             }
-            // Xóa các món đã gọi trước đó của đơn đặt bàn
-            await DeleteGoiMonByDatBanIdAsync(datBanId);
 
-            // Lưu danh sách món mới
+            // Lưu món với LanGoiMon
             foreach (var goiMon in goiMonList)
             {
                 goiMon.DatBanId = datBanId;
+                goiMon.LanGoiMon = lanGoiMon;
                 goiMon.ThoiGianGoiMon = DateTime.Now;
-                await _goiMonRepository.AddAsync(goiMon); 
+                await _goiMonRepository.AddAsync(goiMon);
             }
-            await _goiMonRepository.SaveChangesAsync(); 
+            await _goiMonRepository.SaveChangesAsync();
+        }
+
+        public async Task<int> GetMaxLanGoiMonAsync(int datBanId)
+        {
+            var goiMons = await _goiMonRepository.Query()
+                .Where(gm => gm.DatBanId == datBanId)
+                .Select(gm => gm.LanGoiMon)
+                .ToListAsync(); // Chuyển sang client-side để tính Max
+            return goiMons.DefaultIfEmpty(0).Max();
+        }
+
+        public async Task<IEnumerable<GoiMon>> GetByDatBanIdAndLanGoiMonAsync(int datBanId, int lanGoiMon)
+        {
+            return await _goiMonRepository.Query()
+                .Where(gm => gm.DatBanId == datBanId && gm.LanGoiMon == lanGoiMon)
+                .Include(gm => gm.MonAn)
+                .ToListAsync();
         }
 
         public async Task<decimal> CalculateTongTienAsync(int datBanId)

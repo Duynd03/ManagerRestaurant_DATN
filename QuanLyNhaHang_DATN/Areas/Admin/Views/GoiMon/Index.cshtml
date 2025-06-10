@@ -61,12 +61,10 @@
                 </div>
             </div>
 
-            <!-- Giỏ hàng -->
+            <!-- Danh sách món gọi -->
             <div class="mt-4">
-                <div class="card border-primary">
-                    <div class="card-header bg-primary text-white">
-                        <h3 class="mb-0">Danh sách món gọi</h3>
-                    </div>
+                <h4 class="mb-3">Danh sách món gọi</h4>
+                <div class="card border-primary mb-3">
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-bordered table-hover">
@@ -78,13 +76,76 @@
                                     </tr>
                                 </thead>
                                 <tbody id="cartItems">
-                                    <!-- Giỏ hàng sẽ được cập nhật động -->
+                                    <!-- Món sẽ được cập nhật động -->
                                 </tbody>
+                                <tfoot id="cartTotal">
+                                    <tr>
+                                        <td colspan="2" class="text-end"><strong>Tổng cộng:</strong></td>
+                                        <td class="text-success fw-bold" style="font-size: 1.2em;">0 VNĐ</td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
-                        <h4 class="text-success fw-bold text-end mt-3">Tổng tiền: <span id="totalPrice">0 VNĐ</span></h4>
                     </div>
                 </div>
+            </div>
+
+            <!-- Lịch sử gọi món -->
+            <div class="mt-4">
+                <h4 class="mb-3">Lịch sử gọi món</h4>
+                @if (ViewBag.GoiMonByLan != null)
+                {
+                    var goiMonByLan = ViewBag.GoiMonByLan as Dictionary<int, List<QuanLyNhaHang_DATN.ViewModels.GoiMonViewModel>>;
+                    var maxLanGoiMon = ViewBag.MaxLanGoiMon as int? ?? 0;
+                    var tongTienTatCaLan = 0m;
+                    for (int lan = 1; lan <= maxLanGoiMon; lan++)
+                    {
+                        if (goiMonByLan.ContainsKey(lan) && goiMonByLan[lan].Any())
+                        {
+                            var tongTienLan = goiMonByLan[lan].Sum(item => item.Gia * item.SoLuong);
+                            tongTienTatCaLan += tongTienLan;
+                            <div class="card border-primary mb-3">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">Lần gọi @lan</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-hover">
+                                            <thead class="table-primary">
+                                                <tr>
+                                                    <th>Tên món ăn</th>
+                                                    <th class="text-center">Số lượng</th>
+                                                    <th>Thành tiền</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in goiMonByLan[lan])
+                                                {
+                                                    <tr>
+                                                        <td>@item.TenMonAn</td>
+                                                        <td class="text-center">@item.SoLuong</td>
+                                                        <td>@((item.Gia * item.SoLuong).ToString("N0")) VNĐ</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <td colspan="2" class="text-end"><strong>Tổng cộng:</strong></td>
+                                                    <td class="text-success fw-bold">@tongTienLan.ToString("N0") VNĐ</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    <div class="card border-success mt-3 text-end">
+                        <div class="card-body">
+                            <h5 class="text-success"><strong>Tổng cộng: @tongTienTatCaLan.ToString("N0") VNĐ</strong></h5>
+                        </div>
+                    </div>
+                }
             </div>
 
             <!-- Nút điều khiển -->
@@ -93,7 +154,7 @@
                     <button class="btn btn-danger shadow-sm" onclick="clearCart()">
                         <i class="fas fa-times-circle me-1"></i> Hủy
                     </button>
-                    <button class="btn btn-info shadow-sm" onclick="saveGoiMon()">
+                    <button class="btn btn-info shadow-sm" id="btnSaveGoiMon" onclick="saveGoiMon()">
                         <i class="fas fa-save me-1"></i> Lưu lại
                     </button>
                     <button class="btn btn-success shadow-sm" onclick="createHoaDon()">
@@ -109,13 +170,19 @@
     <script>
         let selectedMonAnList = [];
         let currentDatBanId = @Model.Id;
+        let currentLanGoiMon = @ViewBag.CurrentLanGoiMon;
 
-        // Load danh sách gọi món đã lưu khi trang được tải
+        // Load danh sách món của lần gọi mới nhất khi trang load
         $(document).ready(function () {
-            // Sử dụng JSON.parse để đảm bảo dữ liệu được tuần tự hóa đúng
-            const goiMonList = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.GoiMonList ?? new List<QuanLyNhaHang_DATN.ViewModels.GoiMonViewModel>()))');
-            selectedMonAnList = goiMonList || [];
-            updateCart();
+            const goiMonList = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.GoiMonByLan != null && ViewBag.MaxLanGoiMon != null && ViewBag.GoiMonByLan.ContainsKey(ViewBag.MaxLanGoiMon) ? ViewBag.GoiMonByLan[ViewBag.MaxLanGoiMon] : new List<QuanLyNhaHang_DATN.ViewModels.GoiMonViewModel>()))');
+            selectedMonAnList = goiMonList.map(item => ({
+                MonAnId: item.MonAnId,
+                TenMonAn: item.TenMonAn,
+                Gia: item.Gia,
+                SoLuong: item.SoLuong,
+                LanGoiMon: @ViewBag.MaxLanGoiMon || 1
+            })) || [];
+            updateCartDisplay();
         });
 
         // Load món ăn theo danh mục với phân trang
@@ -133,12 +200,12 @@
                         } else {
                             response.items.forEach(item => {
                                 tbody.append(`
-                                            <tr>
-                                                <td>${item.tenMonAn}</td>
-                                                <td>${item.gia.toLocaleString()} VNĐ</td>
-                                                <td><button class="btn btn-success btn-sm" onclick="addToCart(${item.id}, '${item.tenMonAn}', ${item.gia})">+</button></td>
-                                            </tr>
-                                        `);
+                                                    <tr>
+                                                        <td>${item.tenMonAn}</td>
+                                                        <td>${item.gia.toLocaleString()} VNĐ</td>
+                                                        <td><button class="btn btn-success btn-sm" onclick="addToCart(${item.id}, '${item.tenMonAn}', ${item.gia}, currentLanGoiMon)">+</button></td>
+                                                    </tr>
+                                                `);
                             });
                         }
                         updatePagination(danhMucId, response.totalCount, response.pageIndex, response.pageSize);
@@ -150,6 +217,148 @@
                     alert("Lỗi khi tải món ăn: " + xhr.statusText);
                 }
             });
+        };
+
+        // Thêm món vào giỏ hàng
+        window.addToCart = function (id, tenMonAn, gia, lan) {
+            let existingItem = selectedMonAnList.find(item => item.MonAnId === id && item.LanGoiMon === lan);
+            if (existingItem) {
+                existingItem.SoLuong += 1;
+            } else {
+                selectedMonAnList.push({ MonAnId: id, TenMonAn: tenMonAn, Gia: gia, SoLuong: 1, LanGoiMon: lan });
+            }
+            updateCartDisplay();
+        };
+
+        // Xóa món khỏi giỏ hàng
+        window.removeFromCart = function (id, lan) {
+            let item = selectedMonAnList.find(item => item.MonAnId === id && item.LanGoiMon === lan);
+            if (item) {
+                item.SoLuong -= 1;
+                if (item.SoLuong <= 0) {
+                    selectedMonAnList = selectedMonAnList.filter(item => item.MonAnId !== id || item.LanGoiMon !== lan);
+                }
+            }
+            updateCartDisplay();
+        };
+
+        // Cập nhật giao diện giỏ hàng
+        window.updateCartDisplay = function () {
+            let tbody = $("#cartItems");
+            tbody.empty();
+
+            let total = 0;
+            let hasItems = false;
+            selectedMonAnList.forEach(item => {
+                if (item.LanGoiMon === currentLanGoiMon) {
+                    const thanhTien = item.Gia * item.SoLuong;
+                    total += thanhTien;
+                    hasItems = true;
+                    tbody.append(`
+                                        <tr>
+                                            <td>${item.TenMonAn}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-danger" onclick="removeFromCart(${item.MonAnId}, ${item.LanGoiMon})">-</button>
+                                                ${item.SoLuong}
+                                                <button class="btn btn-sm btn-success" onclick="addToCart(${item.MonAnId}, '${item.TenMonAn}', ${item.Gia}, ${item.LanGoiMon})">+</button>
+                                            </td>
+                                            <td>${thanhTien.toLocaleString()} VNĐ</td>
+                                        </tr>
+                                    `);
+                }
+            });
+
+            let tfoot = $("#cartTotal");
+            if (hasItems) {
+                tfoot.show();
+                $("#cartTotal td:last-child").text(total.toLocaleString() + " VNĐ");
+            } else {
+                tfoot.hide();
+            }
+        };
+
+        // Lưu danh sách gọi món
+        window.saveGoiMon = function () {
+            const itemsToSave = selectedMonAnList.filter(item => item.LanGoiMon === currentLanGoiMon);
+            if (itemsToSave.length === 0) {
+                alert("Vui lòng chọn ít nhất một món ăn!");
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append("datBanId", currentDatBanId);
+            itemsToSave.forEach((item, index) => {
+                formData.append(`goiMonViewModels[${index}].MonAnId`, item.MonAnId);
+                formData.append(`goiMonViewModels[${index}].SoLuong`, item.SoLuong);
+                formData.append(`goiMonViewModels[${index}].Gia`, item.Gia);
+                formData.append(`goiMonViewModels[${index}].TenMonAn`, item.TenMonAn);
+            });
+
+            $.ajax({
+                url: "/Admin/GoiMon/SaveGoiMon",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("RequestVerificationToken", $('input[name="__RequestVerificationToken"]').val());
+                },
+                success: function (response) {
+                    if (response.success) {
+                        alert(response.message);
+                        window.location.reload();
+                    } else {
+                        alert(response.message || "Có lỗi khi lưu gọi món.");
+                    }
+                },
+                error: function (xhr) {
+                    alert("Lỗi khi gửi yêu cầu: " + xhr.statusText);
+                }
+            });
+        };
+
+        // Xóa danh sách gọi món chưa lưu
+        window.clearCart = function () {
+            if (currentDatBanId <= 0) {
+                alert("Đặt bàn không hợp lệ!");
+                return;
+            }
+
+            if (confirm("Bạn có chắc chắn muốn hủy các món chưa lưu?")) {
+                selectedMonAnList = selectedMonAnList.filter(item => item.LanGoiMon !== currentLanGoiMon);
+                updateCartDisplay();
+                alert("Đã xóa các món chưa lưu của lần hiện tại!");
+            }
+        };
+
+        // Xuất hóa đơn
+        window.createHoaDon = function () {
+            if (currentDatBanId <= 0) {
+                alert("Đặt bàn không hợp lệ! Vui lòng kiểm tra lại thông tin đặt bàn.");
+                return;
+            }
+
+            if (confirm("Bạn có chắc chắn muốn tạo hóa đơn cho đặt bàn này? Sau khi tạo, vui lòng kiểm tra tại danh sách hóa đơn.")) {
+                $.ajax({
+                    url: "/Admin/HoaDon/CreateHoaDon",
+                    type: "POST",
+                    data: { datBanId: currentDatBanId },
+                    beforeSend: function (xhr) {
+                        xhr.setRequestHeader("RequestVerificationToken", $('input[name="__RequestVerificationToken"]').val());
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            alert(response.message);
+                            window.location.href = "/Admin/HoaDon/HoaDonHienThoi";
+                        } else {
+                            alert(response.message || "Lỗi không xác định khi tạo hóa đơn!");
+                        }
+                    },
+                    error: function (xhr) {
+                        alert("Lỗi khi gửi yêu cầu đến server: " + xhr.statusText);
+                    }
+                });
+            }
         };
 
         // Hàm cập nhật phân trang cố định
@@ -180,131 +389,5 @@
             paginationHtml += '</ul></nav>';
             $("#paginationContainer").html(paginationHtml);
         }
-
-        // Thêm món vào giỏ hàng
-        window.addToCart = function (id, tenMonAn, gia) {
-            let existingItem = selectedMonAnList.find(item => item.MonAnId === id);
-            if (existingItem) {
-                existingItem.SoLuong += 1;
-            } else {
-                selectedMonAnList.push({ MonAnId: id, TenMonAn: tenMonAn, Gia: gia, SoLuong: 1 });
-            }
-            updateCart();
-        };
-
-        // Xóa món khỏi giỏ hàng
-        window.removeFromCart = function (id) {
-            let item = selectedMonAnList.find(item => item.MonAnId === id);
-            if (item) {
-                item.SoLuong -= 1;
-                if (item.SoLuong <= 0) {
-                    selectedMonAnList = selectedMonAnList.filter(item => item.MonAnId !== id);
-                }
-            }
-            updateCart();
-        };
-
-        // Cập nhật giỏ hàng trên giao diện
-        window.updateCart = function () {
-            let tbody = $("#cartItems");
-            tbody.empty();
-
-            let total = 0;
-            selectedMonAnList.forEach(item => {
-                // Đảm bảo các giá trị hợp lệ
-                const tenMonAn = item.TenMonAn || "Món không xác định";
-                const soLuong = Number(item.SoLuong) || 1;
-                const gia = Number(item.Gia) || 0;
-
-                let thanhTien = gia * soLuong;
-                total += thanhTien;
-
-                tbody.append(`
-                            <tr>
-                                <td>${tenMonAn}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-danger" onclick="removeFromCart(${item.MonAnId})">-</button>
-                                    ${soLuong}
-                                    <button class="btn btn-sm btn-success" onclick="addToCart(${item.MonAnId}, '${tenMonAn}', ${gia})">+</button>
-                                </td>
-                                <td>${thanhTien.toLocaleString()} VNĐ</td>
-                            </tr>
-                        `);
-            });
-
-            $("#totalPrice").text(total.toLocaleString() + " VNĐ");
-        };
-
-        // Lưu danh sách gọi món
-        window.saveGoiMon = function () {
-            if (selectedMonAnList.length === 0) {
-                alert("Vui lòng chọn ít nhất một món ăn!");
-                return;
-            }
-
-            // Chuẩn hóa dữ liệu trước khi gửi
-            const goiMonViewModels = selectedMonAnList.map(item => ({
-                MonAnId: item.MonAnId,
-                SoLuong: Number(item.SoLuong) || 1,
-                Gia: Number(item.Gia) || 0
-            }));
-
-            $.ajax({
-                url: "/Admin/GoiMon/SaveGoiMon",
-                type: "POST",
-                data: JSON.stringify({
-                    datBanId: currentDatBanId,
-                    goiMonViewModels: goiMonViewModels
-                }),
-                contentType: "application/json",
-                success: function (response) {
-                    if (response.success) {
-                        alert(response.message);
-                        window.location.reload();
-                    } else {
-                        alert(response.message || "Có lỗi khi lưu gọi món.");
-                    }
-                },
-                error: function (xhr) {
-                    alert("Lỗi khi gửi yêu cầu: " + xhr.statusText);
-                }
-            });
-        };
-
-        // Xóa danh sách gọi món (hủy)
-        window.clearCart = function () {
-            selectedMonAnList = [];
-            updateCart();
-        };
-
-        // Xuất hóa đơn
-        window.createHoaDon = function () {
-            if (selectedMonAnList.length === 0) {
-                alert("Vui lòng chọn ít nhất một món ăn!");
-                return;
-            }
-
-            if (currentDatBanId <= 0) {
-                alert("Đặt bàn không hợp lệ!");
-                return;
-            }
-
-            $.ajax({
-                url: "/Admin/HoaDon/CreateHoaDon", 
-                type: "POST",
-                data: { datBanId: currentDatBanId }, 
-                success: function (response) {
-                    if (response.success) {
-                        alert(response.message);
-                        window.location.reload(); 
-                    } else {
-                        alert(response.message || "Có lỗi khi tạo hóa đơn.");
-                    }
-                },
-                error: function (xhr) {
-                    alert("Lỗi khi gửi yêu cầu: " + xhr.statusText);
-                }
-            });
-        };
     </script>
 }

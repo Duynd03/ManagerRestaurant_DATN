@@ -30,25 +30,34 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
             _datBanService = datBanService;
         }
 
-        // Hiển thị trang gọi món
+
         public async Task<IActionResult> Index(int datBanId)
         {
             var danhMucs = (await _danhMucService.GetAllAsync()).ToList();
             ViewBag.DanhMucList = danhMucs;
             ViewBag.DatBanId = datBanId;
 
-            // Lấy danh sách gọi món đã lưu và ánh xạ sang ViewModel
-            var goiMons = await _goiMonService.GetByDatBanIdAsync(datBanId);
+            var maxLanGoiMon = await _goiMonService.GetMaxLanGoiMonAsync(datBanId);
+            var allGoiMons = await _goiMonService.GetByDatBanIdAsync(datBanId);
             var monAns = await _monAnService.GetAllAsync();
-            var goiMonViewModels = goiMons.Select(gm => new GoiMonViewModel
-            {
-                MonAnId = gm.MonAnId,
-                SoLuong = gm.SoLuong,
-                Gia = gm.Gia,
-                TenMonAn = monAns.FirstOrDefault(m => m.Id == gm.MonAnId)?.TenMonAn ?? ""
-            }).ToList();
+            var goiMonByLan = new Dictionary<int, List<GoiMonViewModel>>();
 
-            ViewBag.GoiMonList = goiMonViewModels;
+            for (int lan = 1; lan <= maxLanGoiMon; lan++)
+            {
+                var goiMons = await _goiMonService.GetByDatBanIdAndLanGoiMonAsync(datBanId, lan);
+                goiMonByLan[lan] = goiMons.Select(gm => new GoiMonViewModel
+                {
+                    MonAnId = gm.MonAnId,
+                    SoLuong = gm.SoLuong,
+                    Gia = gm.Gia,
+                    TenMonAn = monAns.FirstOrDefault(m => m.Id == gm.MonAnId)?.TenMonAn ?? ""
+                }).ToList();
+            }
+
+            ViewBag.GoiMonByLan = goiMonByLan;
+            ViewBag.MaxLanGoiMon = maxLanGoiMon;
+            ViewBag.CurrentLanGoiMon = maxLanGoiMon + 1; // Truyền lần gọi món mới
+
             return View(new DatBan { Id = datBanId });
         }
 
@@ -82,7 +91,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
         // Lưu danh sách gọi món từ ViewModel
         [HttpPost]
-        public async Task<IActionResult> SaveGoiMon([FromBody] SaveGoiMonRequest request)
+        public async Task<IActionResult> SaveGoiMon(SaveGoiMonRequest request)
         {
             if (request == null || request.goiMonViewModels == null || !request.goiMonViewModels.Any())
             {
@@ -92,22 +101,53 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
             try
             {
                 var monAns = await _monAnService.GetAllAsync();
+                var maxLanGoiMon = await _goiMonService.GetMaxLanGoiMonAsync(request.datBanId);
+                var lanGoiMon = maxLanGoiMon + 1; // Tăng lần gọi món cho món mới
                 var goiMonList = request.goiMonViewModels.Select(vm => new GoiMon
                 {
                     MonAnId = vm.MonAnId,
                     SoLuong = vm.SoLuong,
                     Gia = vm.Gia,
                     DatBanId = request.datBanId,
-                    ThoiGianGoiMon = DateTime.Now
+                    ThoiGianGoiMon = DateTime.Now,
+                    LanGoiMon = lanGoiMon // Gán lần gọi món mới
                 }).ToList();
 
-                await _goiMonService.SaveGoiMonListAsync(request.datBanId, goiMonList);
-                await _datBanService.UpdateBanGoiMonAsync(request.datBanId); // Thêm để cập nhật trạng thái bàn
+                await _goiMonService.SaveGoiMonListAsync(request.datBanId, goiMonList, lanGoiMon);
+                await _datBanService.UpdateBanGoiMonAsync(request.datBanId);
                 return Json(new { success = true, message = "Lưu gọi món thành công!" });
             }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = $"Lỗi khi lưu gọi món: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ClearUnsavedGoiMon(int datBanId)
+        {
+            if (datBanId <= 0)
+            {
+                return Json(new { success = false, message = "Đặt bàn không hợp lệ!" });
+            }
+
+            try
+            {
+                var maxLanGoiMon = await _goiMonService.GetMaxLanGoiMonAsync(datBanId);
+                var savedGoiMons = await _goiMonService.GetByDatBanIdAndLanGoiMonAsync(datBanId, maxLanGoiMon);
+                var savedItems = savedGoiMons.Select(gm => new
+                {
+                    MonAnId = gm.MonAnId,
+                    SoLuong = gm.SoLuong,
+                    Gia = gm.Gia,
+                    TenMonAn = gm.MonAn?.TenMonAn ?? ""
+                }).ToList();
+
+                return Json(new { success = true, savedItems, message = "Đã tải danh sách món đã lưu!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi xử lý: {ex.Message}" });
             }
         }
     }

@@ -43,7 +43,18 @@
                 </div>
             </form>
         </div>
+        
+        <div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content" id="createModalContent"></div>
+            </div>
+        </div>
 
+        <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content" id="editModalContent"></div>
+            </div>
+        </div>
         <div class="card-body">
             <!-- Danh sách khách hàng chờ xếp bàn -->
             <div class="table-responsive">
@@ -83,7 +94,7 @@
                                         <td>
                                             <div class="d-flex gap-2">
                                             <a class="btn btn-sm btn-success xepBanBtn" href="@Url.Action("DanhSachBanTrong", "DatBan", new { area = "Admin", datBanId = item.Id })">Xếp bàn</a>
-                                            <a class="btn btn-sm btn-warning">Cập nhật</a>
+                                            <button class="btn btn-sm btn-warning editBtn" data-id="@item.Id">Cập nhật</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -108,6 +119,8 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
         $(document).ready(function () {
@@ -162,10 +175,10 @@
                                             <td>${item.sdtLienHe || ""}</td>
                                             <td><span class="badge bg-info">${item.trangThaiDisplay}</span></td>
                                             <td>
-                                                    <div class="d-flex gap-2">
-                                                             <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/DanhSachBanTrong?datBanId=${item.id}">Xếp bàn</a>
-                                                 <a class="btn btn-sm btn-warning">Cập nhật</a>
-                                                 </div>
+                                                <div class="d-flex gap-2">
+                                                    <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/DanhSachBanTrong?datBanId=${item.id}">Xếp bàn</a>
+                                                    <button class="btn btn-sm btn-warning editBtn" data-id="${item.id}">Cập nhật</button>
+                                                </div>
                                             </td>
                                         </tr>`;
                     });
@@ -210,6 +223,99 @@
             window.hideSearchForm = function () {
                 document.getElementById('searchFormContainer').style.display = 'none';
             }
+            // hàm thêm đơn đặt bàn
+            $("#btnCreate").click(function (e) {
+                e.preventDefault();
+                $.ajax({
+                    url: "/Admin/DatBan/Create",
+                    type: "GET",
+                    success: function (data) {
+                        $("#createModalContent").html(data);
+                        $.validator.unobtrusive.parse("#createDatBanForm");
+                        $("#createModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Không thể tải form thêm đơn đặt bàn.");
+                    }
+                });
+            });
+
+            $(document).on("submit", "#createDatBanForm", function (e) {
+                e.preventDefault();
+                let $form = $(this);
+                
+                if (!$form[0].checkValidity()) {
+                    $form.find(":invalid").first().focus();
+                    return;
+                }
+
+                let formData = $form.serialize();
+
+                $.ajax({
+                    url: "/Admin/DatBan/CreateDatBan",
+                    type: "POST",
+                    data: formData,
+                    success: function (response) {
+                        if (response.success) {
+                            $("#createModal").modal("hide");
+                            $form[0].reset();
+                            loadData(currentPageIndex, currentPageSize);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Lỗi khi tạo đơn đặt bàn. Vui lòng thử lại.");
+                    }
+                });
+            });
+            // Xử lý nút Cập nhật
+            $(document).on("click", ".editBtn", function (e) {
+                e.preventDefault();
+                let id = $(this).data("id");
+                $.ajax({
+                    url: "/Admin/DatBan/Edit/" + id,
+                    type: "GET",
+                    success: function (data) {
+                        $("#editModalContent").html(data);
+                        $.validator.unobtrusive.parse("#editDatBanForm");
+                        $("#editModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Không thể tải form chỉnh sửa đơn đặt bàn.");
+                    }
+                });
+            });
+
+            $(document).on("submit", "#editDatBanForm", function (e) {
+                e.preventDefault();
+                let $form = $(this);
+                if (!$form[0].checkValidity()) {
+                    $form.find(":invalid").first().focus();
+                    return;
+                }
+
+                let formData = $form.serialize();
+
+                $.ajax({
+                    url: "/Admin/DatBan/Edit",
+                    type: "POST",
+                    data: formData,
+                    success: function (response) {
+                        if (response.success) {
+                            $("#editModal").modal("hide");
+                            loadData(currentPageIndex, currentPageSize);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Lỗi khi cập nhật đơn đặt bàn. Vui lòng thử lại.");
+                    }
+                });
+            });
 
             // Tích hợp SignalR để cập nhật realtime
             var connection = new signalR.HubConnectionBuilder().withUrl("/datBanHub").build();
@@ -248,6 +354,7 @@
             connection.start().catch(function (err) {
                 console.error(err.toString());
             });
+            
 
             // Load dữ liệu ban đầu
             loadData(1, currentPageSize);

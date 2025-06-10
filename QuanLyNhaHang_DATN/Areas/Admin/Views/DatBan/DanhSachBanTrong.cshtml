@@ -174,31 +174,31 @@
             } else {
                 items.forEach(function (dataItem) {
                     let isChecked = window.currentBanIds.includes(dataItem.id) || (dataItem.thongTinLichDat && dataItem.thongTinLichDat.isCurrentTable);
-                    let isDisabled = !dataItem.thongTinLichDat || !dataItem.thongTinLichDat.khaDung;
+                    let isDisabled = !dataItem.thongTinLichDat.khaDung && !dataItem.thongTinLichDat.isCurrentTable;
 
                     html += '<tr>';
                     if (window.currentDatBanId) {
                         html += `<td>
-                                            <input type="checkbox" name="banIds" value="${dataItem.id}"
-                                                   ${isChecked ? 'checked' : ''}
-                                                   ${isDisabled ? 'disabled' : ''}
-                                                   onchange="updateSelectedBanIds(this, ${currentPage})" />
-                                        </td>`;
+                                                    <input type="checkbox" name="banIds" value="${dataItem.id}"
+                                                           ${isChecked ? 'checked' : ''}
+                                                           ${isDisabled ? 'disabled' : ''}
+                                                           onchange="updateSelectedBanIds(this, ${currentPage})" />
+                                                </td>`;
                     }
                     html += `
-                                        <td>${dataItem.tenBan}</td>
-                                        <td>${dataItem.tenKhuVucBan || 'Không có khu vực'}</td>
-                                        <td>
-                                            <span class="badge ${dataItem.trangThaiValue === 0 ? 'bg-success' : 'bg-warning'}">
-                                                ${dataItem.trangThaiDisplay}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            ${dataItem.thongTinLichDat && dataItem.thongTinLichDat.lichDat.length > 0
+                                                <td>${dataItem.tenBan}</td>
+                                                <td>${dataItem.tenKhuVucBan || 'Không có khu vực'}</td>
+                                                <td>
+                                                    <span class="badge ${dataItem.trangThaiValue === 0 ? 'bg-success' : 'bg-warning'}">
+                                                        ${dataItem.trangThaiDisplay}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    ${dataItem.thongTinLichDat && dataItem.thongTinLichDat.lichDat.length > 0
                             ? `<a href="#" class="view-schedule" data-ban-id="${dataItem.id}">Xem lịch</a>`
                             : 'Không có lịch'}
-                                        </td>
-                                    </tr>`;
+                                                </td>
+                                            </tr>`;
                 });
             }
             $("#banTable tbody").html(html);
@@ -291,16 +291,16 @@
                         } else {
                             response.schedules.forEach(function (schedule) {
                                 html += `
-                                                    <tr>
-                                                        <td>${schedule.datBanId}</td>
-                                                        <td>${schedule.tenKhachHang}</td>
-                                                        <td>${schedule.soDienThoai}</td>
-                                                        <td>${schedule.thoiGianDatBan}</td>
-                                                        <td>${schedule.soLuongKhach}</td>
-                                                        <td>${schedule.banGhep}</td>
-                                                        <td>${schedule.nhanVienXuLy}</td>
-                                                        <td>${schedule.ghiChu}</td>
-                                                    </tr>`;
+                                                            <tr>
+                                                                <td>${schedule.datBanId}</td>
+                                                                <td>${schedule.tenKhachHang}</td>
+                                                                <td>${schedule.soDienThoai}</td>
+                                                                <td>${schedule.thoiGianDatBan}</td>
+                                                                <td>${schedule.soLuongKhach}</td>
+                                                                <td>${schedule.banGhep}</td>
+                                                                <td>${schedule.nhanVienXuLy}</td>
+                                                                <td>${schedule.ghiChu}</td>
+                                                            </tr>`;
                             });
                         }
                         $("#scheduleTableBody").html(html);
@@ -336,7 +336,7 @@
                 return;
             }
 
-            let url = window.isChuyenBan ? "/Admin/DatBan/ChuyenBan" : "/Admin/DatBan/XepBan";
+            let url = window.isChuyenBan ? "/Admin/DatBan/ChuyenBan" : "/Admin/DatBan/XepBan"; // Khôi phục hai endpoint riêng
             $.ajax({
                 url: url,
                 type: "POST",

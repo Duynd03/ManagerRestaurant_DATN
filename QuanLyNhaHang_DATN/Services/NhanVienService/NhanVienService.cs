@@ -39,13 +39,12 @@ namespace QuanLyNhaHang_DATN.Services.NhanVienService
                 return new Result<NhanVien>(false, "Số điện thoại đã được sử dụng.");
             }
 
-            // Kiểm tra định dạng số điện thoại (10 chữ số)
+            // Kiểm tra định dạng số điện thoại
             if (!System.Text.RegularExpressions.Regex.IsMatch(sdt, @"^\d{10}$"))
             {
                 return new Result<NhanVien>(false, "Số điện thoại phải có đúng 10 chữ số.");
             }
 
-            // Tạo đối tượng nhân viên mới
             var nhanVien = new NhanVien
             {
                 TenNhanVien = tenNhanVien,
@@ -56,18 +55,16 @@ namespace QuanLyNhaHang_DATN.Services.NhanVienService
                 NgayTao = DateTime.Now
             };
 
-            // Lưu vào database
-            await AddAsync(nhanVien);
-
+            await AddAsync(nhanVien); // Sử dụng BaseService để lưu
             return new Result<NhanVien>(true, "Tạo thông tin nhân viên thành công.", nhanVien);
         }
 
         public async Task<(IEnumerable<NhanVien> Items, int TotalCount)> GetPagedAsync(int pageIndex, int pageSize, NhanVienFilterModel filter)
         {
             IQueryable<NhanVien> query = _context.NhanViens
-        .Include(nv => nv.TaiKhoan)
-        .ThenInclude(tk => tk.Quyen)
-        .Where(nv => nv.TaiKhoan != null
+            .Include(nv => nv.TaiKhoan)
+            .ThenInclude(tk => tk.Quyen)
+            .Where(nv => nv.TaiKhoan != null
             && (nv.TaiKhoan.QuyenId == 1 || nv.TaiKhoan.QuyenId == 2 || nv.TaiKhoan.QuyenId == 3)
             && nv.TaiKhoan.TrangThai == TrangThaiTaiKhoan.DangHoatDong);
 

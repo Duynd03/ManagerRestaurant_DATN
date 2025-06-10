@@ -16,6 +16,12 @@ namespace QuanLyNhaHang_DATN.Repositories.DatBanRepository
             await _context.SaveChangesAsync();
             return datBan;
         }
+        public async Task<DatBan> GetDatBanByIdAsync(int id)
+        {
+            return await _dbSet
+                .Include(db => db.KhachHang)
+                .FirstOrDefaultAsync(db => db.Id == id);
+        }
         public async Task<List<DatBan>> GetByTrangThaiAsync(TrangThaiBanDat trangThai)
         {
             return await _dbSet

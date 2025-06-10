@@ -81,35 +81,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (!Model.Any())
-                        {
-                            <tr>
-                                <td colspan="9" class="text-center">Không có nhân viên nào</td>
-                            </tr>
-                        }
-                        else
-                        {
-                            @foreach (var item in Model)
-                            {
-                                <tr>
-                                    <td>@item.Id</td>
-                                    <td>@item.TenNhanVien</td>
-                                    <td>@item.Sdt</td>
-                                    <td>@(item.NgaySinh?.ToString("dd/MM/yyyy") ?? "Không xác định")</td>
-                                    <td>@item.DiaChi</td>
-                                    <td>@(item.TaiKhoan?.UserName ?? "N/A")</td>
-                                    <td>@(item.TaiKhoan?.Quyen?.Name ?? "N/A")</td>
-                                    <td><span class="badge bg-info">Đang hoạt động</span></td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                        <button class="btn btn-sm btn-warning editBtn" data-id="@item.Id">Cập nhật</button>
-                                        <button class="btn btn-sm btn-info changePasswordBtn" data-taiKhoanId="@item.TaiKhoanId">Đổi mật khẩu</button>
-                                        <button class="btn btn-sm btn-danger deleteBtn" data-taiKhoanId="@item.TaiKhoanId">Khóa</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        }
+                       
                     </tbody>
                 </table>
                 <div id="paginationContainer" class="mt-3"></div>
@@ -158,22 +130,22 @@
                 } else {
                     items.forEach(function (item) {
                         html += `<tr>
-                                    <td>${item.id}</td>
-                                    <td>${item.tenNhanVien || ''}</td>
-                                    <td>${item.sdt || ''}</td>
-                                    <td>${item.ngaySinh || ''}</td>
-                                    <td>${item.diaChi || ''}</td>
-                                    <td>${item.username || ''}</td>
-                                    <td>${item.quyen || ''}</td>
-                                            <td><span class="badge bg-success">${item.trangThaiDisplay || 'Đang hoạt động'}</span></td>
-                                    <td>
-                                            <div class="d-flex gap-2">
-                                        <button class="btn btn-sm btn-warning editBtn" data-id="${item.id || ''}">Cập nhật</button>
+                                <td>${item.id}</td>
+                                <td>${item.tenNhanVien || ''}</td>
+                                <td>${item.sdt || ''}</td>
+                                <td>${item.ngaySinh || ''}</td>
+                                <td>${item.diaChi || ''}</td>
+                                <td>${item.username || ''}</td>
+                                <td>${item.quyen || ''}</td>
+                                <td><span class="badge bg-success">${item.trangThaiDisplay || 'Đang hoạt động'}</span></td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-warning editBtn" data-id="${item.id}">Cập nhật</button> <!-- Đảm bảo data-id lấy từ item.id -->
                                         <button class="btn btn-sm btn-info changePasswordBtn" data-taiKhoanId="${item.taiKhoanId || ''}">Đổi mật khẩu</button>
                                         <button class="btn btn-sm btn-danger deleteBtn" data-taiKhoanId="${item.taiKhoanId || ''}">Khóa</button>
-                                                </div>
-                                    </td>
-                                </tr>`;
+                                    </div>
+                                </td>
+                            </tr>`;
                     });
                 }
                 $("#nhanVienTable tbody").html(html); // Chỉ cập nhật tbody
@@ -223,6 +195,7 @@
                     success: function (data) {
                         $("#createModalContent").html(data);
                         $.validator.unobtrusive.parse("#createForm");
+                        console.log("Validation parsed for #createForm");
                         $("#createModal").modal("show");
                     },
                     error: function () {
@@ -234,9 +207,22 @@
             $(document).on("submit", "#createForm", function (e) {
                 e.preventDefault();
                 let $form = $(this);
-                if (!$form.valid()) return;
+
+                // Debug validation
+                console.log("Form valid:", $form.valid());
+                if (!$form.valid()) {
+                    alert("Dữ liệu không hợp lệ phía client. Vui lòng kiểm tra lại.");
+                    return;
+                }
 
                 let formData = new FormData($form[0]);
+                let token = $form.find('input[name="__RequestVerificationToken"]').val();
+
+                // Debug dữ liệu gửi đi
+                console.log("Dữ liệu gửi đi:");
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
 
                 $.ajax({
                     url: "/Admin/NhanVien/Create",
@@ -244,17 +230,24 @@
                     data: formData,
                     contentType: false,
                     processData: false,
+                    headers: {
+                        "RequestVerificationToken": token
+                    },
                     success: function (response) {
                         if (response.success) {
                             $("#createModal").modal("hide");
                             loadData(currentPageIndex, currentPageSize);
                             alert(response.message);
                         } else {
-                            alert(response.message);
+                            let errorMessage = response.message;
+                            if (response.errors) {
+                                errorMessage += "\nChi tiết lỗi:\n" + response.errors.join("\n");
+                            }
+                            alert(errorMessage);
                         }
                     },
-                    error: function () {
-                        alert("Có lỗi xảy ra khi gửi yêu cầu.");
+                    error: function (xhr, status, error) {
+                        alert("Lỗi: " + error + "\nTrạng thái: " + xhr.status);
                     }
                 });
             });
@@ -262,6 +255,10 @@
             $(document).on("click", ".editBtn", function (e) {
                 e.preventDefault();
                 let id = $(this).data("id");
+                if (!id || id === '') {
+                    alert("Không thể xác định Id của nhân viên. Vui lòng thử lại.");
+                    return;
+                }
                 $.ajax({
                     url: "/Admin/NhanVien/Edit/" + id,
                     type: "GET",
@@ -282,6 +279,12 @@
                 if (!$form.valid()) return;
 
                 let formData = new FormData($form[0]);
+
+                // Debug dữ liệu gửi đi
+                console.log("Dữ liệu gửi đi:");
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
 
                 $.ajax({
                     url: "/Admin/NhanVien/Edit",
@@ -306,7 +309,7 @@
 
             $(document).on("click", ".changePasswordBtn", function (e) {
                 e.preventDefault();
-                let taiKhoanId = $(this).data("taikhoanid");
+                let taiKhoanId = $(this).data("taiKhoanId");
                 $.ajax({
                     url: "/Admin/NhanVien/ChangePassword/" + taiKhoanId,
                     type: "GET",
@@ -327,6 +330,7 @@
                 if (!$form.valid()) return;
 
                 let formData = new FormData($form[0]);
+                let token = $form.find('input[name="__RequestVerificationToken"]').val();
 
                 $.ajax({
                     url: "/Admin/NhanVien/ChangePassword",
@@ -334,13 +338,18 @@
                     data: formData,
                     contentType: false,
                     processData: false,
+                    headers: {
+                        "RequestVerificationToken": token
+                    },
                     success: function (response) {
                         if (response.success) {
                             $("#changePasswordModal").modal("hide");
                             loadData(currentPageIndex, currentPageSize);
                             alert(response.message);
                         } else {
-                            alert(response.message);
+                            // Hiển thị lỗi trên form thay vì alert để người dùng dễ chỉnh sửa
+                            let errorHtml = `<div class="alert alert-danger">${response.message}</div>`;
+                            $("#changePasswordModalContent").prepend(errorHtml);
                         }
                     },
                     error: function () {
@@ -357,9 +366,12 @@
                     type: "POST",
                     url: "/Admin/NhanVien/Delete",
                     data: { taiKhoanId: taiKhoanId },
+                    headers: {
+                        "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                    },
                     success: function (res) {
                         if (res.success) {
-                            loadData(currentPageIndex, currentPageSize);
+                            loadData(1, currentPageSize); // Reset về trang 1 để tránh lỗi pageIndex
                             alert(res.message);
                         } else {
                             alert(res.message);

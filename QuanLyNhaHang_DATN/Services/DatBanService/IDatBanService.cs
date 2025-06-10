@@ -8,6 +8,9 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
     public interface IDatBanService : IBaseService<DatBan>
     {
         Task<Result<DatBan>> CreateDatBanAsync(DatBanViewModel viewModel, string username);
+        Task<Result<DatBan>> UpdateDatBanAsync(DatBanViewModel viewModel, string username);
+        Task<DatBan> GetDatBanByIdAsync(int id);
+        Task<DatBan> GetByIdWithDetailsAsync(int id);
         Task<List<Ban>> GetAvailableBansAsync();
         Task<Ban> GetBanByIdAsync(int banId);
         Task<List<DatBan>> GetByTrangThaiAsync(TrangThaiBanDat trangThai);
@@ -21,7 +24,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         Task<DatBan> GetByIdWithKhachHangAsync(int id);
        
         Task<Result<DatBan>> ChuyenBanAsync(int datBanId, List<int> banIds, int nhanVienId);
-        Task<Result<DatBan>> HuyBanAsync(int datBanId, int nhanVienId);
+        Task<Result<DatBan>> HuyBanAsync(int datBanId, int nhanVienId, string? lyDoHuy);
         // 
         IQueryable<BanSchedule> GetBanSchedules();
         Task UpdateBanSauThanhToanAsync(int datBanId, DateTime ThoiGianKetThuc);
@@ -33,6 +36,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         Task<KhaDungBanViewModel> CheckTableAvailabilityAsync(int banId, DateTime bookingTime, DateTime bookingEndTime, int? currentDatBanId = null);
         Task<List<dynamic>> GetBanScheduleDetailsForBan(int banId, DateTime currentTime);
         (int MinAllowedBans, int MaxAllowedBans, string TableMessage) CalculateRequiredTables(int soLuongNguoi);
+       
     }
 
 }

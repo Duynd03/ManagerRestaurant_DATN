@@ -25,6 +25,8 @@ namespace QuanLyNhaHang_DATN.Models
         public DateTime? ThoiGianKetThuc { get; set; }
         public TrangThaiBanDat TrangThai { get; set; }
         public LoaiDatBan Loai { get; set; }
+        public string? LyDoHuy { get; set; }
+
         [ForeignKey("KhachHangId")]
         [ValidateNever]
         public KhachHang KhachHang { get; set; }

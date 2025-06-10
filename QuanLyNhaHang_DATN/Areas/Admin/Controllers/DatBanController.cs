@@ -10,6 +10,7 @@ using QuanLyNhaHang_DATN.Services.BanService;
 using QuanLyNhaHang_DATN.Services.DatBanService;
 using QuanLyNhaHang_DATN.Services.KhuVucBanService;
 using QuanLyNhaHang_DATN.ViewModels;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
@@ -182,7 +183,6 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> XepBan(int datBanId, int[] banIds)
         {
-
             try
             {
                 if (banIds == null || banIds.Length == 0)
@@ -196,23 +196,19 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Đặt bàn không tồn tại." });
                 }
 
-                (int minAllowedBans, int maxAllowedBans, string tableMessage) = _datBanService.CalculateRequiredTables(datBan.SoLuongNguoi);
+                var (minAllowedBans, maxAllowedBans, tableMessage) = _datBanService.CalculateRequiredTables(datBan.SoLuongNguoi);
+                if (banIds.Length < minAllowedBans || banIds.Length > maxAllowedBans)
+                {
+                    return Json(new { success = false, message = tableMessage });
+                }
 
-                if (banIds.Length < minAllowedBans)
-                {
-                    return Json(new { success = false, message = tableMessage });
-                }
-                if (banIds.Length > maxAllowedBans)
-                {
-                    return Json(new { success = false, message = tableMessage });
-                }
-                // Lấy NhanVienId từ User.Claims
                 var nhanVienIdClaim = User.FindFirst("NhanVienId")?.Value;
                 if (string.IsNullOrEmpty(nhanVienIdClaim) || !int.TryParse(nhanVienIdClaim, out int nhanVienId))
                 {
                     return Json(new { success = false, message = "Không tìm thấy thông tin nhân viên. Vui lòng kiểm tra đăng nhập." });
                 }
-                var result = await _datBanService.XepBanAsync(datBanId, banIds.ToList(), nhanVienId);
+
+                var result = await _datBanService.XepBanAsync(datBanId, banIds.ToList(), nhanVienId); // Gọi XepBanAsync
                 if (!result.Success)
                 {
                     return Json(new { success = false, message = string.Join(", ", result.Errors) });
@@ -301,6 +297,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     TenKhachHang = tenKhachHang,
                     SDT = sdt,
                     TrangThai = TrangThaiBanDat.DaXacNhan
+                   
                 };
 
                 var (items, totalCount) = await _datBanService.GetPagedAsync(pageIndex, pageSize, filter);
@@ -420,7 +417,8 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     }
 
                     soBanCanThiet = (int)Math.Ceiling((double)datBan.SoLuongNguoi / 6);
-                    var thoiGianKetThucDuKien = datBan.ThoiGianDatBan.AddHours(2.0);
+                   
+                    var thoiGianKetThucDuKien = datBan.ThoiGianDatBan.AddHours(DefaultDurationHours).AddMinutes(30);
 
                     var currentBanIds = await _datBanService.GetCurrentBanIdsAsync(datBanId.Value);
 
@@ -431,14 +429,6 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                             datBan.ThoiGianDatBan,
                             thoiGianKetThucDuKien,
                             datBanId.Value);
-
-                        if (currentBanIds.Contains(ban.Id))
-                        {
-                            khaDung.KhaDung = true;
-                            khaDung.LichDat = khaDung.LichDat
-                                .Where(ld => ld.DatBanId != datBanId)
-                                .ToList();
-                        }
 
                         khaDungBan[ban.Id] = khaDung;
                     }
@@ -516,13 +506,8 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Đặt bàn không tồn tại." });
                 }
 
-                (int minAllowedBans, int maxAllowedBans, string tableMessage) = _datBanService.CalculateRequiredTables(datBan.SoLuongNguoi);
-
-                if (banIds.Length < minAllowedBans)
-                {
-                    return Json(new { success = false, message = tableMessage });
-                }
-                if (banIds.Length > maxAllowedBans)
+                var (minAllowedBans, maxAllowedBans, tableMessage) = _datBanService.CalculateRequiredTables(datBan.SoLuongNguoi);
+                if (banIds.Length < minAllowedBans || banIds.Length > maxAllowedBans)
                 {
                     return Json(new { success = false, message = tableMessage });
                 }
@@ -533,7 +518,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Không tìm thấy thông tin nhân viên. Vui lòng kiểm tra đăng nhập." });
                 }
 
-                var result = await _datBanService.ChuyenBanAsync(datBanId, banIds.ToList(), nhanVienId);
+                var result = await _datBanService.ChuyenBanAsync(datBanId, banIds.ToList(), nhanVienId); // Gọi ChuyenBanAsync
                 if (!result.Success)
                 {
                     return Json(new { success = false, message = string.Join(", ", result.Errors) });
@@ -562,29 +547,53 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         }
 
         // Action mới: Xử lý hủy bàn, cập nhật trạng thái và xóa liên kết
+        [HttpGet]
+        public async Task<IActionResult> HuyBanForm(int datBanId)
+        {
+            var datBan = await _datBanService.GetByIdWithDetailsAsync(datBanId);
+            if (datBan == null)
+            {
+                return Json(new { success = false, message = "Đơn đặt bàn không tồn tại." });
+            }
+
+            var viewModel = new DatBanViewModel
+            {
+                Id = datBan.Id,
+                TenKhachHang = datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                SDT = datBan.KhachHang?.SDT ?? "",
+                ThoiGianDatBan = datBan.ThoiGianDatBan,
+                SoLuongNguoi = datBan.SoLuongNguoi,
+                Bans = datBan.DatBanBans != null && datBan.DatBanBans.Any()
+                ? string.Join(", ", datBan.DatBanBans.Select(dbb => dbb.Ban.TenBan)): "Không có bàn",
+                TenLienHe = datBan.TenLienHe ?? "",
+                SDTLienHe = datBan.SDTLienHe ?? "",
+                TenNhanVien = datBan.NhanVien?.TenNhanVien ?? "",
+                TrangThaiDisplay = GetEnumDisplayName(datBan.TrangThai),
+                LyDoHuy = ""
+            };
+
+            return PartialView("_HuyDatBanPartial", viewModel);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> HuyBan(int datBanId)
+        public async Task<IActionResult> HuyBan(int datBanId, string lyDoHuy)
         {
             try
             {
-                // Lấy ID nhân viên từ claims để ghi nhận người hủy
                 var nhanVienIdClaim = User.FindFirst("NhanVienId")?.Value;
                 if (string.IsNullOrEmpty(nhanVienIdClaim) || !int.TryParse(nhanVienIdClaim, out int nhanVienId))
                 {
                     return Json(new { success = false, message = "Không tìm thấy thông tin nhân viên. Vui lòng kiểm tra đăng nhập." });
                 }
 
-                // Gọi service để hủy bàn (cập nhật TrangThai = DaHuy, xóa DatBan_Ban, BanSchedule)
-                var result = await _datBanService.HuyBanAsync(datBanId, nhanVienId);
+                var result = await _datBanService.HuyBanAsync(datBanId, nhanVienId, lyDoHuy);
                 if (!result.Success)
                 {
                     return Json(new { success = false, message = string.Join(", ", result.Errors) });
                 }
 
-                // Lấy thông tin đơn đặt bàn sau khi hủy
                 var datBanUpdated = result.Data;
-                // Gửi thông báo SignalR để cập nhật client-side
                 await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
                 {
                     id = datBanUpdated.Id,
@@ -596,9 +605,10 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     tenLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.TenLienHe : string.Empty,
                     sdtLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.SDTLienHe : string.Empty,
                     trangThai = (int)datBanUpdated.TrangThai
+                   
                 });
 
-                return Json(new { success = true, message = "Hủy bàn thành công!" });
+                return Json(new { success = true, message = result.Message });
             }
             catch (Exception ex)
             {
@@ -679,6 +689,223 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 {
                     success = true,
                     items = result,
+                    totalCount,
+                    pageIndex,
+                    pageSize
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = $"Lỗi khi tải dữ liệu: {ex.Message}"
+                });
+            }
+        }
+        // create
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return PartialView("_CreateDatBanPartial");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateDatBan(DatBanViewModel viewModel)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                    return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors });
+                }
+
+                var username = User.Identity?.Name;
+
+                // Gán giá trị mặc định
+                viewModel.CocTien = 0;
+                viewModel.Loai = LoaiDatBan.DatKhiDen;
+                viewModel.IsDatHo = false;
+
+                var result = await _datBanService.CreateDatBanAsync(viewModel, username);
+
+                if (!result.Success)
+                    return Json(new { success = false, message = string.Join(", ", result.Errors) });
+
+                var datBan = result.Data;
+
+                await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
+                {
+                    id = datBan.Id,
+                    tenKhachHang = datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                    sdt = datBan.KhachHang?.SDT ?? string.Empty,
+                    thoiGianDatBan = datBan.ThoiGianDatBan,
+                    soLuongNguoi = datBan.SoLuongNguoi,
+                    cocTien = datBan.CocTien,
+                    tenLienHe = datBan.IsDatHo == true ? datBan.TenLienHe : string.Empty,
+                    sdtLienHe = datBan.IsDatHo == true ? datBan.SDTLienHe : string.Empty,
+                    trangThai = (int)datBan.TrangThai
+                });
+
+                return Json(new { success = true, message = "Tạo đơn đặt bàn thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi tạo đơn đặt bàn: {ex.Message}" });
+            }
+        }
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var datBan = await _datBanService.GetDatBanByIdAsync(id);
+            if (datBan == null)
+            {
+                return NotFound();
+            }
+
+            var viewModel = new DatBanViewModel
+            {
+                Id = datBan.Id,
+                TenKhachHang = datBan.KhachHang?.TenKhachHang ?? "",
+                SDT = datBan.KhachHang?.SDT ?? "",
+                ThoiGianDatBan = datBan.ThoiGianDatBan,
+                SoLuongNguoi = datBan.SoLuongNguoi,
+                GhiChu = datBan.GhiChu
+            };
+
+            return PartialView("_EditDatBanPartial", viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(DatBanViewModel viewModel)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                    return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors });
+                }
+
+                var username = User.Identity?.Name;
+
+                // Gán giá trị mặc định 
+                viewModel.CocTien = 0; 
+                viewModel.Loai = LoaiDatBan.DatKhiDen; 
+                viewModel.IsDatHo = false; 
+
+                var result = await _datBanService.UpdateDatBanAsync(viewModel, username);
+
+                if (!result.Success)
+                    return Json(new { success = false, message = string.Join(", ", result.Errors) });
+
+                var datBan = result.Data;
+
+                await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
+                {
+                    id = datBan.Id,
+                    tenKhachHang = datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                    sdt = datBan.KhachHang?.SDT ?? string.Empty,
+                    thoiGianDatBan = datBan.ThoiGianDatBan,
+                    soLuongNguoi = datBan.SoLuongNguoi,
+                    cocTien = datBan.CocTien,
+                    tenLienHe = datBan.IsDatHo == true ? datBan.TenLienHe : string.Empty,
+                    sdtLienHe = datBan.IsDatHo == true ? datBan.SDTLienHe : string.Empty,
+                    trangThai = (int)datBan.TrangThai
+                });
+
+                return Json(new { success = true, message = "Cập nhật đơn đặt bàn thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi cập nhật đơn đặt bàn: {ex.Message}" });
+            }
+        }
+        public async Task<IActionResult> LichSuDatBan(int pageIndex = 1, int pageSize = 5, string tenKhachHang = null, string sdt = null, int? trangThai = null)
+        {
+            try
+            {
+                var filter = new DatBanFilterModel
+                {
+                    TenKhachHang = tenKhachHang,
+                    SDT = sdt,
+                    TrangThai = trangThai.HasValue ? (TrangThaiBanDat)trangThai : null // Cho phép lọc HoanThanh hoặc DaHuy
+                };
+
+                var (items, totalCount) = await _datBanService.GetPagedAsync(pageIndex, pageSize, filter);
+
+                var viewModels = items.Select(db => new DatBanViewModel
+                {
+                    Id = db.Id,
+                    TenKhachHang = db.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                    SDT = db.KhachHang?.SDT ?? "",
+                    ThoiGianDatBan = db.ThoiGianDatBan,
+                    SoLuongNguoi = db.SoLuongNguoi,
+                    CocTien = db.CocTien,
+                    Bans = db.DatBanBans != null ? string.Join(", ", db.DatBanBans.Select(dbb => dbb.Ban.TenBan)) : "Không có bàn",
+                    IsDatHo = db.IsDatHo ?? false,
+                    TenLienHe = db.IsDatHo == true ? db.TenLienHe : "",
+                    SDTLienHe = db.IsDatHo == true ? db.SDTLienHe : "",
+                    TenNhanVien = db.NhanVien?.TenNhanVien ?? "",
+                    TrangThai = db.TrangThai,
+                    TrangThaiDisplay = GetEnumDisplayName(db.TrangThai),
+                    LyDoHuy = db.LyDoHuy
+                }).ToList();
+
+                ViewBag.SearchTenKhachHang = tenKhachHang;
+                ViewBag.SearchSDT = sdt;
+                ViewBag.PageIndex = pageIndex;
+                ViewBag.PageSize = pageSize;
+                ViewBag.TotalCount = totalCount;
+                ViewBag.TrangThai = trangThai;
+
+                return View(viewModels);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi tải lịch sử đặt bàn: {ex.Message}";
+                return View(new List<DatBanViewModel>());
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetPagedLichSuDatBan(int pageIndex = 1, int pageSize = 5, string tenKhachHang = null, string sdt = null, int trangThai = 0)
+        {
+            try
+            {
+                var filter = new DatBanFilterModel
+                {
+                    TenKhachHang = tenKhachHang,
+                    SDT = sdt,
+                    TrangThai = (TrangThaiBanDat)trangThai // 3: HoanThanh, 2: DaHuy
+                };
+
+                var (items, totalCount) = await _datBanService.GetPagedAsync(pageIndex, pageSize, filter);
+
+                var pagedItems = items.Select(db => new
+                {
+                    Id = db.Id,
+                    TenKhachHang = db.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                    SDT = db.KhachHang?.SDT ?? "",
+                    ThoiGianDatBan = db.ThoiGianDatBan,
+                    SoLuongNguoi = db.SoLuongNguoi,
+                    CocTien = db.CocTien,
+                    DanhSachBanGhep = db.DatBanBans != null ? string.Join(", ", db.DatBanBans.Select(dbb => dbb.Ban.TenBan)) : "Không có bàn",
+                    TenLienHe = db.IsDatHo == true ? db.TenLienHe : "",
+                    SDTLienHe = db.IsDatHo == true ? db.SDTLienHe : "",
+                    TenNhanVien = db.NhanVien?.TenNhanVien ?? "",
+                    TrangThaiDisplay = GetEnumDisplayName(db.TrangThai),
+                    TrangThai = (int)db.TrangThai,
+                    LyDoHuy = db.LyDoHuy ?? "Không có"
+                }).ToList();
+
+                return Json(new
+                {
+                    success = true,
+                    items = pagedItems,
                     totalCount,
                     pageIndex,
                     pageSize

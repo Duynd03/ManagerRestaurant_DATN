@@ -1,5 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using DinkToPdf;
+using DinkToPdf.Contracts;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using QuanLyNhaHang_DATN.Areas.Admin.ViewModels;
 using QuanLyNhaHang_DATN.Models;
 using QuanLyNhaHang_DATN.Services;
@@ -7,6 +11,7 @@ using QuanLyNhaHang_DATN.Services.GoiMonService;
 using QuanLyNhaHang_DATN.Services.HoaDonService;
 using QuanLyNhaHang_DATN.Services.MonAnService;
 using QuanLyNhaHang_DATN.ViewModels;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,15 +24,21 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         private readonly IHoaDonService _hoaDonService;
         private readonly IGoiMonService _goiMonService;
         private readonly IMonAnService _monAnService;
+        private readonly IConverter _converter; // DinkToPdf converter
+        private readonly ICompositeViewEngine _viewEngine; // Để render view thành string
         private const decimal VatRate = 0.10m; // Tỷ lệ VAT 10%
         public HoaDonController(
             IHoaDonService hoaDonService,
             IGoiMonService goiMonService,
-            IMonAnService monAnService)
+            IMonAnService monAnService,
+            IConverter converter,
+            ICompositeViewEngine viewEngine)
         {
             _hoaDonService = hoaDonService;
             _goiMonService = goiMonService;
             _monAnService = monAnService;
+            _converter = converter;
+            _viewEngine = viewEngine;
         }
 
         [HttpPost]
@@ -45,7 +56,12 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 {
                     return Json(new { success = true, message = "Hóa đơn đã được tạo trước đó, vui lòng liên hệ Kế toán để xử lý!" });
                 }
-
+                // Kiểm tra xem có món ăn được gọi hay không
+                var goiMons = await _goiMonService.GetByDatBanIdAsync(datBanId);
+                if (goiMons == null || !goiMons.Any())
+                {
+                    return Json(new { success = false, message = "Chưa có món ăn nào được lưu! Vui lòng chọn và lưu danh sách món trước khi tạo hóa đơn." });
+                }
                 await _hoaDonService.CreateHoaDonAsync(datBanId);
                 return Json(new { success = true, message = "Tạo hóa đơn thành công! Vui lòng liên hệ Kế toán để xử lý." });
             }
@@ -65,12 +81,16 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
             var goiMons = await _goiMonService.GetByDatBanIdAsync(hoaDon.DatBanId);
             var monAns = await _monAnService.GetAllAsync();
-            var goiMonViewModels = goiMons.Select(gm => new GoiMonViewModel
+           
+
+            var goiMonViewModels = goiMons
+            .GroupBy(gm => gm.MonAnId) // Gộp theo MonAnId
+            .Select(g => new GoiMonViewModel
             {
-                MonAnId = gm.MonAnId,
-                SoLuong = gm.SoLuong,
-                Gia = gm.Gia,
-                TenMonAn = gm.MonAn?.TenMonAn ?? "Món không xác định"
+                MonAnId = g.Key,
+                SoLuong = g.Sum(x => x.SoLuong),
+                Gia = g.First().Gia,
+                TenMonAn = monAns.FirstOrDefault(m => m.Id == g.Key)?.TenMonAn ?? "Món không xác định"
             }).ToList();
 
             var banNames = hoaDon.DatBan?.DatBanBans?.Any() == true
@@ -140,7 +160,8 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 }
                 var phuongThucEnum = (PhuongThucThanhToan)phuongThuc;
                 await _hoaDonService.ConfirmPaymentAsync(id, phuongThucEnum, nhanVienId);
-                return Json(new { success = true, message = "Thanh toán thành công!", redirectUrl = Url.Action("LichSuHoaDon", "HoaDon", new { area = "Admin" }) });
+                //return Json(new { success = true, message = "Thanh toán thành công!", redirectUrl = Url.Action("LichSuHoaDon", "HoaDon", new { area = "Admin" }) });
+                return Json(new { success = true, message = "Thanh toán thành công!" });
             }
             catch (Exception ex)
             {
@@ -300,6 +321,98 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 pageIndex,
                 pageSize
             });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadHoaDonPdf(int id)
+        {
+            var hoaDon = await _hoaDonService.GetByIdWithDetailsAsync(id);
+            if (hoaDon == null) return NotFound();
+            if (hoaDon.TrangThai != TrangThaiHoaDon.DaThanhToan)
+                return BadRequest("Hóa đơn chỉ xuất khi đã thanh toán.");
+
+            var goiMons = await _goiMonService.GetByDatBanIdAsync(hoaDon.DatBanId);
+            var monAns = await _monAnService.GetAllAsync();
+
+            var goiMonViewModels = goiMons
+           .GroupBy(gm => gm.MonAnId) // Gộp theo MonAnId
+           .Select(g => new GoiMonViewModel
+           {
+               MonAnId = g.Key,
+               SoLuong = g.Sum(x => x.SoLuong),
+               Gia = g.First().Gia,
+               TenMonAn = monAns.FirstOrDefault(m => m.Id == g.Key)?.TenMonAn ?? "Món không xác định"
+           }).ToList();
+            var banNames = hoaDon.DatBan?.DatBanBans?.Any() == true
+                ? string.Join(", ", hoaDon.DatBan.DatBanBans.Select(dbb => dbb.Ban.TenBan))
+                : "Chưa ghép bàn";
+
+            var tienCoc = hoaDon.DatBan?.CocTien ?? 0;
+            var soTienTruocVat = hoaDon.TongTienGoiMon - tienCoc;
+            var thueVat = soTienTruocVat > 0 ? soTienTruocVat * VatRate : 0;
+            var tongTienThanhToan = soTienTruocVat + thueVat;
+
+            var hoaDonViewModel = new HoaDonViewModel
+            {
+                Id = hoaDon.Id,
+                MaHoaDon = hoaDon.MaHoaDon,
+                DatBanId = hoaDon.DatBanId,
+                TenKhachHang = hoaDon.DatBan?.KhachHang?.TenKhachHang ?? "",
+                SDT = hoaDon.DatBan?.KhachHang?.SDT ?? "",
+                TenLienHe = hoaDon.DatBan?.TenLienHe ?? "",
+                SDTLienHe = hoaDon.DatBan?.SDTLienHe ?? "",
+                ThoiGianDatBan = hoaDon.DatBan?.ThoiGianDatBan ?? default(DateTime),
+                ThoiGianThanhToan = hoaDon.NgayThanhToan,
+                TongTienGoiMon = hoaDon.TongTienGoiMon,
+                TienCoc = tienCoc,
+                ThueVat = thueVat,
+                TongTienThanhToan = tongTienThanhToan,
+                GiamGia = hoaDon.GiamGia,
+                PhuongThucThanhToanDisplay = hoaDon.PhuongThuc.HasValue ? GetEnumDisplayName(hoaDon.PhuongThuc.Value) : "Chưa thanh toán",
+                TrangThaiDisplay = GetEnumDisplayName(hoaDon.TrangThai),
+                Bans = banNames
+            };
+
+            var pdfViewModel = new HoaDonPdfViewModel { HoaDon = hoaDonViewModel, GoiMons = goiMonViewModels };
+            var htmlContent = await RenderViewToStringAsync("PrintHoaDon", pdfViewModel);
+
+            var globalSettings = new GlobalSettings
+            {
+                PaperSize = PaperKind.A6,
+                Orientation = Orientation.Portrait,
+                Margins = new MarginSettings { Top = 5, Bottom = 5, Left = 5, Right = 5 },
+                DocumentTitle = $"HoaDon_{hoaDon.MaHoaDon}"
+            };
+
+            var objectSettings = new ObjectSettings
+            {
+                HtmlContent = htmlContent,
+                WebSettings = { DefaultEncoding = "utf-8" },
+                PagesCount = true
+            };
+
+            var pdf = new HtmlToPdfDocument { GlobalSettings = globalSettings, Objects = { objectSettings } };
+            try
+            {
+                var pdfBytes = _converter.Convert(pdf);
+                return File(pdfBytes, "application/pdf", $"HoaDon_{hoaDon.MaHoaDon}.pdf");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi: {ex.Message} - StackTrace: {ex.StackTrace}");
+                return BadRequest($"Lỗi xuất PDF: {ex.Message}");
+            }
+        }
+
+        private async Task<string> RenderViewToStringAsync(string viewName, object model)
+        {
+            ViewData.Model = model;
+            using var sw = new StringWriter();
+            var viewResult = _viewEngine.FindView(ControllerContext, viewName, false);
+            if (viewResult.View == null) throw new FileNotFoundException($"View {viewName} không tìm thấy.");
+            var viewContext = new ViewContext(ControllerContext, viewResult.View, ViewData, TempData, sw, new HtmlHelperOptions());
+            await viewResult.View.RenderAsync(viewContext);
+            return sw.GetStringBuilder().ToString();
         }
 
         private string GetEnumDisplayName<TEnum>(TEnum value) where TEnum : Enum

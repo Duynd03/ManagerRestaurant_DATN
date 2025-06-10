@@ -1,0 +1,32 @@
+﻿@model QuanLyNhaHang_DATN.ViewModels.DatBanViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">Hủy Đơn Đặt Bàn</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <form id="huyDatBanForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="datBanId" value="@Model.Id" />
+        <ul class="list-unstyled">
+            <li><strong>ID:</strong> @Model.Id</li>
+            <li><strong>Khách hàng:</strong> @Model.TenKhachHang</li>
+            <li><strong>Số điện thoại:</strong> @Model.SDT</li>
+            <li><strong>Thời gian đặt:</strong> @Model.ThoiGianDatBan.ToString("dd/MM/yyyy HH:mm")</li>
+            <li><strong>Số người:</strong> @Model.SoLuongNguoi</li>
+            <li><strong>Bàn đã xếp:</strong> @Model.Bans</li>
+            <li><strong>Tên liên hệ:</strong> @Model.TenLienHe</li>
+            <li><strong>SĐT liên hệ:</strong> @Model.SDTLienHe</li>
+           
+            <li><strong>Trạng thái:</strong> @Model.TrangThaiDisplay</li>
+        </ul>
+        <div class="form-group mt-3">
+            <label for="lyDoHuy" class="form-label">Lý do hủy <span class="text-danger">*</span></label>
+            <textarea name="lyDoHuy" class="form-control" rows="3" placeholder="Nhập lý do hủy" required></textarea>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            <button type="submit" class="btn btn-danger">Xác nhận</button>
+        </div>
+    </form>
+</div>

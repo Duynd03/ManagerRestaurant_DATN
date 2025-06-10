@@ -7,6 +7,11 @@ using QuanLyNhaHang_DATN.Hubs;
 using System.Net;
 using QuanLyNhaHang_DATN.Config;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Rotativa.AspNetCore;
+using DinkToPdf.Contracts;
+using DinkToPdf;
+
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -66,6 +71,32 @@ builder.Services.AddHttpContextAccessor();
 
 // Thêm cấu hình VNPayConfig
 builder.Services.Configure<VNPayConfig>(builder.Configuration.GetSection("VNPayConfig"));
+
+// Cấu hình PDF
+builder.Services.AddSingleton<IConverter>(sp =>
+{
+    var context = sp.GetService<IWebHostEnvironment>();
+    var path = context?.ContentRootPath ?? Directory.GetCurrentDirectory();
+    var wkHtmlToPdfDir = Path.Combine(path, "wwwroot", "lib", "wkhtmltopdf");
+
+    // Đặt biến môi trường PATH trước khi khởi tạo PdfTools
+    var currentPath = Environment.GetEnvironmentVariable("PATH") ?? "";
+    Environment.SetEnvironmentVariable("PATH", wkHtmlToPdfDir + Path.PathSeparator + currentPath);
+
+    // Tạo thư mục tạm
+    var tempFolder = Path.Combine(path, "wwwroot", "temp");
+    if (!Directory.Exists(tempFolder))
+    {
+        Directory.CreateDirectory(tempFolder);
+    }
+
+    // Khởi tạo PdfTools mà không cần thuộc tính bổ sung
+    var pdfTools = new PdfTools();
+
+    return new SynchronizedConverter(pdfTools);
+});
+
+
 //
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("NhaHangConnection")));

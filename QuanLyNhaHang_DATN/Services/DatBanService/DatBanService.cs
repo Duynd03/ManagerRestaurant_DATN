@@ -20,8 +20,9 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         private readonly IKhachHangService _khachHangService;
         private readonly IBanRepository _banRepository;
         private readonly INhanVienRepository _nhanVienRepository;
-        private const int MaxSoGhe = 6; // Số ghế tối đa mỗi bàn (4 hoặc 6)
-        private const double DefaultDurationHours = 2.0; // Thời gian mặc định là 2 giờ
+        private const int MaxSoGhe = 6; 
+        private const double DefaultDurationHours = 2.0; 
+        private const double bufferTimeMinutes = 30;
         public DatBanService(
             IDatBanRepository datBanRepository,
             IKhachHangService khachHangService,
@@ -127,12 +128,72 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
             return new Result<DatBan>(true, "Đặt bàn thành công.", datBan);
         }
 
-        public async Task<List<Ban>> GetAvailableBansAsync()  // BỎ
+        public async Task<Result<DatBan>> UpdateDatBanAsync(DatBanViewModel viewModel, string username)
+        {
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    // Kiểm tra tồn tại
+                    var datBan = await _context.DatBans
+                        .Include(db => db.KhachHang)
+                        .FirstOrDefaultAsync(db => db.Id == viewModel.Id);
+
+                    if (datBan == null)
+                        return new Result<DatBan>(false, "Đơn đặt bàn không tồn tại.", null);
+
+
+                    if (viewModel.ThoiGianDatBan < DateTime.Now) // 07:09 PM +07, 05/06/2025
+                        return new Result<DatBan>(false, "Thời gian đặt bàn phải lớn hơn hiện tại.", null);
+
+                    // Cập nhật KhachHang
+                    datBan.KhachHang.TenKhachHang = viewModel.TenKhachHang;
+                    datBan.KhachHang.SDT = viewModel.SDT;
+                    _context.KhachHangs.Update(datBan.KhachHang);
+
+                    // Cập nhật DatBan
+                    datBan.ThoiGianDatBan = viewModel.ThoiGianDatBan;
+                    datBan.SoLuongNguoi = viewModel.SoLuongNguoi;
+                    datBan.GhiChu = viewModel.GhiChu;
+
+                    // Cập nhật nhân viên xử lý
+                    if (!string.IsNullOrEmpty(username))
+                    {
+                        var nhanVien = await _nhanVienRepository.GetByTaiKhoanUsernameAsync(username);
+                        if (nhanVien != null)
+                            datBan.NhanVienId = nhanVien.Id;
+                    }
+
+                    await _datBanRepository.UpdateAsync(datBan);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return new Result<DatBan>(true, "Cập nhật đơn đặt bàn thành công!", datBan);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return new Result<DatBan>(false, $"Lỗi khi cập nhật: {ex.Message}", null);
+                }
+            }
+        }
+        public async Task<DatBan> GetDatBanByIdAsync(int id)
+        {
+            return await _datBanRepository.GetDatBanByIdAsync(id);
+        }
+        public async Task<List<Ban>> GetAvailableBansAsync()  
         {
             var bans = await _banRepository.GetAvailableAsync();
             return bans.ToList();
         }
-
+        public async Task<DatBan> GetByIdWithDetailsAsync(int id)
+        {
+            return await _context.DatBans
+                .Include(db => db.KhachHang)
+                .Include(db => db.DatBanBans)
+                .ThenInclude(dbb => dbb.Ban)
+                .FirstOrDefaultAsync(db => db.Id == id);
+        }
         public async Task<Ban> GetBanByIdAsync(int banId)
         {
             return await _banRepository.GetByIdAsync(banId);
@@ -175,6 +236,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
                 {
                     query = query.Where(db => db.TrangThai == filter.TrangThai.Value);
                 }
+               
             }
 
             var total = await query.CountAsync();
@@ -193,89 +255,58 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
             {
                 try
                 {
-                    var errors = new List<string>();
-                    var datBan = await GetByIdWithKhachHangAsync(datBanId);
+                    var datBan = await _datBanRepository.GetByIdWithDatBanBansAsync(datBanId);
                     if (datBan == null)
-                        return new Result<DatBan>(false, "Đặt bàn không tồn tại.", null, new List<string> { "Đặt bàn không tồn tại." });
+                        return new Result<DatBan>(false, "Đơn đặt bàn không tồn tại.", null, new List<string> { "Không tìm thấy đơn." });
 
                     if (datBan.TrangThai != TrangThaiBanDat.ChoXacNhan)
                         return new Result<DatBan>(false, "Đặt bàn không ở trạng thái chờ xác nhận.", null);
 
-                    var bans = new List<Ban>();
+                    // Thêm kiểm tra để tránh xếp lại đơn đã có bàn
+                    if (datBan.DatBanBans != null && datBan.DatBanBans.Any())
+                        return new Result<DatBan>(false, "Đặt bàn đã được xếp, không thể xếp lại.", null);
+
+                    // Kiểm tra số lượng bàn
+                    var (minAllowedBans, maxAllowedBans, tableMessage) = CalculateRequiredTables(datBan.SoLuongNguoi);
+                    if (banIds.Count < minAllowedBans || banIds.Count > maxAllowedBans)
+                        return new Result<DatBan>(false, tableMessage, null, new List<string> { tableMessage });
+
+                    // Kiểm tra khả dụng 
+                    var bookingEndTime = datBan.ThoiGianDatBan.AddHours(DefaultDurationHours).AddMinutes(bufferTimeMinutes);
                     foreach (var banId in banIds)
                     {
-                        var ban = await _banRepository.GetByIdAsync(banId);
-                        if (ban == null)
-                            errors.Add($"Bàn {banId} không tồn tại.");
-                        else
-                            bans.Add(ban);
+                        var khaDung = await CheckTableAvailabilityAsync(banId, datBan.ThoiGianDatBan, bookingEndTime, datBanId);
+                        if (!khaDung.KhaDung)
+                            return new Result<DatBan>(false, $"Bàn {banId} không khả dụng.", null, new List<string> { $"Bàn {banId} đã được đặt." });
                     }
 
-                    var (minAllowedBans, maxAllowedBans, tableMessage) = CalculateRequiredTables(datBan.SoLuongNguoi);
-
-                    if (bans.Count < minAllowedBans)
-                        errors.Add(tableMessage);
-                    if (bans.Count > maxAllowedBans)
-                        errors.Add(tableMessage);
-
-                    if (errors.Any())
-                        return new Result<DatBan>(false, "Có lỗi khi xếp bàn.", datBan, errors);
-
-                    const double minimumTimeGapHours = 3.0;
-                    const double bufferTimeMinutes = 30;
-
-                    var thoiGianDuKienKetThuc = datBan.ThoiGianDatBan.AddHours(DefaultDurationHours);
-
-                    var banIdsList = bans.Select(b => b.Id).ToList();
-                    var existingSchedules = await _context.BanSchedules
-                        .Where(bs => banIdsList.Contains(bs.BanId) && bs.DatBanId != datBanId)
-                        .Where(bs => bs.TrangThai == TrangThaiBan.DaDatTruoc)
-                        .ToListAsync();
-
-                    foreach (var ban in bans)
+                    // Tạo liên kết và lịch mới
+                    var now = DateTime.Now;
+                    var newSchedules = banIds.Select(banId => new BanSchedule
                     {
-                        var schedulesForBan = existingSchedules.Where(bs => bs.BanId == ban.Id);
-                        foreach (var schedule in schedulesForBan)
-                        {
-                            var existingEnd = schedule.ThoiGianKetThuc ?? schedule.ThoiGianBatDau.AddHours(DefaultDurationHours).AddMinutes(bufferTimeMinutes);
-                            var timeDifference = Math.Abs((datBan.ThoiGianDatBan - schedule.ThoiGianBatDau).TotalHours);
-                            if (datBan.ThoiGianDatBan < existingEnd && thoiGianDuKienKetThuc > schedule.ThoiGianBatDau)
-                                errors.Add($"Bàn {ban.TenBan} đã được đặt vào khoảng thời gian này.");
-                            if (timeDifference < minimumTimeGapHours)
-                                errors.Add($"Bàn {ban.TenBan} đã được đặt vào thời gian gần ({schedule.ThoiGianBatDau}). Vui lòng chọn thời gian cách ít nhất {minimumTimeGapHours} tiếng.");
-                        }
-                    }
+                        BanId = banId,
+                        DatBanId = datBanId,
+                        ThoiGianBatDau = datBan.ThoiGianDatBan,
+                        ThoiGianKetThuc = datBan.ThoiGianDatBan.AddHours(DefaultDurationHours),
+                        TrangThai = TrangThaiBan.DaDatTruoc,
+                        NgayTao = now
+                    }).ToList();
+                    await _datBanRepository.AddRangeBanSchedulesAsync(newSchedules);
 
-                    if (errors.Any())
-                        return new Result<DatBan>(false, "Có lỗi khi xếp bàn.", datBan, errors);
-
-                    datBan.TrangThai = TrangThaiBanDat.DaXacNhan;
+                    var newDatBanBans = banIds.Select(banId => new DatBan_Ban
+                    {
+                        DatBanId = datBanId,
+                        BanId = banId
+                    }).ToList();
+                    await _datBanRepository.AddRangeDatBanBansAsync(newDatBanBans);
+                    // Cập nhật thông tin đơn
                     datBan.NhanVienId = nhanVienId;
-
-                    foreach (var ban in bans)
-                    {
-                        await AddDatBanBanAsync(new DatBan_Ban
-                        {
-                            DatBanId = datBanId,
-                            BanId = ban.Id
-                        });
-
-                        _context.BanSchedules.Add(new BanSchedule
-                        {
-                            BanId = ban.Id,
-                            DatBanId = datBanId,
-                            ThoiGianBatDau = datBan.ThoiGianDatBan,
-                            ThoiGianKetThuc = datBan.ThoiGianDatBan.AddHours(DefaultDurationHours),
-                            TrangThai = TrangThaiBan.DaDatTruoc,
-                            NgayTao = DateTime.Now
-                        });
-                    }
+                    datBan.TrangThai = TrangThaiBanDat.DaXacNhan;
+                    await _datBanRepository.UpdateAsync(datBan);
 
                     await _context.SaveChangesAsync();
-                    await UpdateAsync(datBan);
                     await transaction.CommitAsync();
-
-                    return new Result<DatBan>(true, "Xếp bàn thành công.", datBan);
+                    return new Result<DatBan>(true, "Xếp bàn thành công!", datBan);
                 }
                 catch (Exception ex)
                 {
@@ -349,10 +380,10 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         }
         public (int MinAllowedBans, int MaxAllowedBans, string TableMessage) CalculateRequiredTables(int soLuongNguoi)
         {
-            if (soLuongNguoi <= 0)
-            {
-                return (1, 1, "Vui lòng chọn 1 bàn."); // Giá trị mặc định
-            }
+            //if (soLuongNguoi <= 0)
+            //{
+            //    return (1, 1, "Vui lòng chọn 1 bàn."); // Giá trị mặc định
+            //}
 
             int N = soLuongNguoi / MaxSoGhe;
             int soDu = soLuongNguoi % MaxSoGhe;
@@ -377,137 +408,19 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
 
             return (minAllowedBans, maxAllowedBans, tableMessage);
         }
-        //public async Task<TrangThaiBanViewModel> GetTableStatusAsync(int banId, DateTime currentTime)
-        //{
-        //    var schedule = await _context.BanSchedules
-        //        .Where(bs => bs.BanId == banId &&
-        //                    bs.ThoiGianBatDau <= currentTime &&
-        //                    (bs.ThoiGianKetThuc == null || bs.ThoiGianKetThuc >= currentTime) &&
-        //                    bs.DatBan.TrangThai != TrangThaiBanDat.HoanThanh &&
-        //                    bs.DatBan.TrangThai != TrangThaiBanDat.DaHuy)
-        //        .OrderBy(bs => bs.ThoiGianBatDau)
-        //        .FirstOrDefaultAsync();
-
-        //    if (schedule == null)
-        //    {
-        //        return new TrangThaiBanViewModel
-        //        {
-        //            TrangThaiValue = (int)TrangThaiBan.Trong,
-        //            TrangThaiDisplay = "Trống"
-        //        };
-        //    }
-
-        //    if (schedule.ThoiGianBatDau > currentTime)
-        //    {
-        //        return new TrangThaiBanViewModel
-        //        {
-        //            TrangThaiValue = (int)TrangThaiBan.Trong,
-        //            TrangThaiDisplay = "Trống"
-        //        };
-        //    }
-
-        //    return new TrangThaiBanViewModel
-        //    {
-        //        TrangThaiValue = (int)schedule.TrangThai,
-        //        TrangThaiDisplay = schedule.TrangThai == TrangThaiBan.DaDatTruoc ? "Đã đặt trước" : "Đang sử dụng"
-        //    };
-        //}
-        //public async Task<TrangThaiBanViewModel> GetTableStatusAsync(int banId, DateTime currentTime)
-        //{
-        //    const double DefaultDurationHours = 2.0;
-        //    const double bufferTimeMinutes = 30;
-        //    var endTime = currentTime.AddHours(DefaultDurationHours).AddMinutes(bufferTimeMinutes);
-
-        //    var schedule = await _context.BanSchedules
-        //        .Where(bs => bs.BanId == banId &&
-        //                     bs.ThoiGianBatDau <= endTime &&
-        //                     (bs.ThoiGianKetThuc == null || bs.ThoiGianKetThuc >= currentTime) &&
-        //                     bs.DatBan.TrangThai != TrangThaiBanDat.HoanThanh &&
-        //                     bs.DatBan.TrangThai != TrangThaiBanDat.DaHuy)
-        //        .OrderBy(bs => bs.ThoiGianBatDau)
-        //        .FirstOrDefaultAsync();
-
-        //    if (schedule == null)
-        //    {
-        //        return new TrangThaiBanViewModel
-        //        {
-        //            TrangThaiValue = (int)TrangThaiBan.Trong,
-        //            TrangThaiDisplay = "Trống"
-        //        };
-        //    }
-
-        //    return new TrangThaiBanViewModel
-        //    {
-        //        TrangThaiValue = (int)schedule.TrangThai,
-        //        TrangThaiDisplay = schedule.TrangThai == TrangThaiBan.DaDatTruoc ? "Đã đặt trước" : "Đang sử dụng"
-        //    };
-        //}
-
-        //public async Task<KhaDungBanViewModel> CheckTableAvailabilityAsync(int banId, DateTime bookingTime, DateTime bookingEndTime, int? datBanId = null)
-        //{
-        //    const double bufferTimeMinutes = 30;
-        //    const double minimumTimeGapHours = 3.0;
-
-        //    var status = await GetTableStatusAsync(banId, bookingTime);
-
-        //    var schedules = await _context.BanSchedules
-        //        .Include(bs => bs.DatBan)
-        //        .Where(bs => bs.BanId == banId &&
-        //                    (bs.TrangThai == TrangThaiBan.DaDatTruoc || bs.TrangThai == TrangThaiBan.DangSuDung) &&
-        //                    bs.DatBan.TrangThai != TrangThaiBanDat.HoanThanh)
-        //        .ToListAsync();
-
-        //    bool isCurrentTable = false;
-        //    if (datBanId.HasValue)
-        //    {
-        //        isCurrentTable = await _context.DatBan_Bans
-        //            .AnyAsync(dbb => dbb.DatBanId == datBanId.Value && dbb.BanId == banId);
-        //    }
-
-        //    bool khaDung = status.TrangThaiValue == (int)TrangThaiBan.Trong || isCurrentTable;
-        //    if (khaDung && !isCurrentTable)
-        //    {
-        //        khaDung = !schedules.Any(bs =>
-        //        {
-        //            var existingEnd = bs.ThoiGianBatDau.AddHours(DefaultDurationHours).AddMinutes(bufferTimeMinutes);
-        //            var timeDifference = Math.Abs((bookingTime - bs.ThoiGianBatDau).TotalHours);
-        //            return (bookingTime < existingEnd && bookingEndTime > bs.ThoiGianBatDau) ||
-        //                   timeDifference < minimumTimeGapHours;
-        //        });
-        //    }
-
-        //    var lichDat = schedules
-        //        .Where(bs => !datBanId.HasValue || bs.DatBanId != datBanId)
-        //        .Select(bs => new LichDatViewModel
-        //        {
-        //            DatBanId = bs.DatBanId,
-        //            ThoiGianBatDau = bs.ThoiGianBatDau
-        //        })
-        //        .ToList();
-
-        //    return new KhaDungBanViewModel
-        //    {
-        //        KhaDung = khaDung,
-        //        LichDat = lichDat,
-        //        TrangThai = status,
-        //        IsCurrentTable = isCurrentTable
-        //    };
-        //}
+        
         public async Task<TrangThaiBanViewModel> GetTableStatusAsync(int banId, DateTime checkTime)
         {
-            const double DefaultDurationHours = 2.0;
-            const double bufferTimeMinutes = 30;
             var endTime = checkTime.AddHours(DefaultDurationHours).AddMinutes(bufferTimeMinutes);
-
             var schedule = await _context.BanSchedules
                 .Where(bs => bs.BanId == banId &&
                              bs.ThoiGianBatDau <= endTime &&
-                             (bs.ThoiGianKetThuc == null || bs.ThoiGianKetThuc >= checkTime) &&
+                             (bs.ThoiGianKetThuc == null ||
+                              (bs.ThoiGianKetThuc.HasValue && bs.ThoiGianKetThuc.Value.AddMinutes(bufferTimeMinutes) >= checkTime)) &&
                              bs.DatBan.TrangThai != TrangThaiBanDat.HoanThanh &&
                              bs.DatBan.TrangThai != TrangThaiBanDat.DaHuy)
                 .OrderBy(bs => bs.ThoiGianBatDau)
                 .FirstOrDefaultAsync();
-
             if (schedule == null)
             {
                 return new TrangThaiBanViewModel
@@ -525,11 +438,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
         }
         public async Task<KhaDungBanViewModel> CheckTableAvailabilityAsync(int banId, DateTime bookingTime, DateTime bookingEndTime, int? datBanId = null)
         {
-            const double bufferTimeMinutes = 30;
-            const double minimumTimeGapHours = 3.0;
-
-            var status = await GetTableStatusAsync(banId, bookingTime); // Dùng bookingTime để lấy trạng thái
-
+            var status = await GetTableStatusAsync(banId, bookingTime); 
             var allSchedules = await _context.BanSchedules
                 .Include(bs => bs.DatBan)
                 .Where(bs => bs.BanId == banId
@@ -545,19 +454,24 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
 
             bool isCurrentTable = datBanId.HasValue && await _context.DatBan_Bans
                 .AnyAsync(dbb => dbb.DatBanId == datBanId.Value && dbb.BanId == banId);
-
             bool khaDung = status.TrangThaiValue == (int)TrangThaiBan.Trong || isCurrentTable;
-            if (khaDung && !isCurrentTable)
+
+            if (khaDung)
             {
                 khaDung = !allSchedules.Any(bs =>
                 {
                     var existingEnd = bs.ThoiGianKetThuc ?? bs.ThoiGianBatDau.AddHours(DefaultDurationHours).AddMinutes(bufferTimeMinutes);
-                    var timeDifference = Math.Abs((bookingTime - bs.ThoiGianBatDau).TotalHours);
-                    return (bookingTime < existingEnd && bookingEndTime > bs.ThoiGianBatDau) ||
-                           timeDifference < minimumTimeGapHours;
+                    return (bookingTime < existingEnd && bookingEndTime > bs.ThoiGianBatDau) && (datBanId == null || bs.DatBanId != datBanId);
                 });
             }
-
+            if (isCurrentTable)
+            {
+                status = new TrangThaiBanViewModel
+                {
+                    TrangThaiValue = (int)TrangThaiBan.Trong,
+                    TrangThaiDisplay = "Trống"
+                };
+            }
             var lichDat = displaySchedules
                 .Where(bs => !datBanId.HasValue || bs.DatBanId != datBanId)
                 .Select(bs => new LichDatViewModel
@@ -608,32 +522,28 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
                     if (datBan.TrangThai != TrangThaiBanDat.DaXacNhan)
                         return new Result<DatBan>(false, "Chỉ có thể chuyển bàn cho đơn đã xác nhận.", null, new List<string> { "Trạng thái đơn không hợp lệ." });
 
+                    // Kiểm tra số lượng bàn
                     var (minAllowedBans, maxAllowedBans, tableMessage) = CalculateRequiredTables(datBan.SoLuongNguoi);
-
-                    if (banIds.Count < minAllowedBans)
-                        return new Result<DatBan>(false, tableMessage, null, new List<string> { tableMessage });
-                    if (banIds.Count > maxAllowedBans)
+                    if (banIds.Count < minAllowedBans || banIds.Count > maxAllowedBans)
                         return new Result<DatBan>(false, tableMessage, null, new List<string> { tableMessage });
 
-                    var bookingEndTime = datBan.ThoiGianDatBan.AddHours(DefaultDurationHours);
-                    var currentBanIds = datBan.DatBanBans?.Select(dbb => dbb.BanId).ToList() ?? new List<int>();
-
+                    // Kiểm tra khả dụng bằng CheckTableAvailabilityAsync
+                    var bookingEndTime = datBan.ThoiGianDatBan.AddHours(DefaultDurationHours).AddMinutes(bufferTimeMinutes);
                     foreach (var banId in banIds)
                     {
                         var khaDung = await CheckTableAvailabilityAsync(banId, datBan.ThoiGianDatBan, bookingEndTime, datBanId);
-                        if (!khaDung.KhaDung)
+                        if (!khaDung.KhaDung && !khaDung.IsCurrentTable)
                             return new Result<DatBan>(false, $"Bàn {banId} không khả dụng.", null, new List<string> { $"Bàn {banId} đã được đặt." });
                     }
 
-                    var currentSchedules = await _context.BanSchedules
-                        .Where(bs => bs.DatBanId == datBanId)
-                        .ToListAsync();
-                    var currentTrangThai = currentSchedules.Any() && currentSchedules.Any(bs => bs.TrangThai == TrangThaiBan.DangSuDung)
+                    // Xóa liên kết và lịch cũ
+                    await _datBanRepository.RemoveRangeDatBanBansAsync(datBan.DatBanBans);
+                    await _datBanRepository.RemoveBanSchedulesByDatBanIdAsync(datBanId);
+
+                    // Tạo liên kết và lịch mới, giữ trạng thái cũ
+                    var currentTrangThai = (await _context.BanSchedules.AnyAsync(bs => bs.DatBanId == datBanId && bs.TrangThai == TrangThaiBan.DangSuDung))
                         ? TrangThaiBan.DangSuDung
                         : TrangThaiBan.DaDatTruoc;
-
-                    await _datBanRepository.RemoveBanSchedulesByDatBanIdAsync(datBanId);
-                    await _datBanRepository.RemoveRangeDatBanBansAsync(datBan.DatBanBans);
 
                     var now = DateTime.Now;
                     var newSchedules = banIds.Select(banId => new BanSchedule
@@ -641,7 +551,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
                         BanId = banId,
                         DatBanId = datBanId,
                         ThoiGianBatDau = datBan.ThoiGianDatBan,
-                        ThoiGianKetThuc = bookingEndTime,
+                        ThoiGianKetThuc = datBan.ThoiGianDatBan.AddHours(DefaultDurationHours),
                         TrangThai = currentTrangThai,
                         NgayTao = now
                     }).ToList();
@@ -654,6 +564,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
                     }).ToList();
                     await _datBanRepository.AddRangeDatBanBansAsync(newDatBanBans);
 
+                    // Cập nhật thông tin đơn
                     datBan.NhanVienId = nhanVienId;
                     await _datBanRepository.UpdateAsync(datBan);
 
@@ -664,12 +575,12 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
-                    return new Result<DatBan>(false, "Lỗi khi chuyển bàn.", null, new List<string> { ex.Message });
+                    return new Result<DatBan>(false, $"Lỗi khi chuyển bàn: {ex.Message}", null);
                 }
             }
         }
 
-        public async Task<Result<DatBan>> HuyBanAsync(int datBanId, int nhanVienId)
+        public async Task<Result<DatBan>> HuyBanAsync(int datBanId, int nhanVienId, string? lyDoHuy)
         {
             using (var transaction = await _context.Database.BeginTransactionAsync())
             {
@@ -682,19 +593,17 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
                     if (datBan.TrangThai != TrangThaiBanDat.ChoXacNhan && datBan.TrangThai != TrangThaiBanDat.DaXacNhan)
                         return new Result<DatBan>(false, "Chỉ có thể hủy đơn chờ xác nhận hoặc đã xác nhận.", null, new List<string> { "Trạng thái đơn không hợp lệ." });
 
-                    // Cập nhật trạng thái đơn
                     datBan.TrangThai = TrangThaiBanDat.DaHuy;
                     datBan.NhanVienId = nhanVienId;
-                   
+                    datBan.LyDoHuy = lyDoHuy;
 
-                    // Xóa lịch và liên kết
                     await _datBanRepository.RemoveBanSchedulesByDatBanIdAsync(datBanId);
                     await _datBanRepository.RemoveRangeDatBanBansAsync(datBan.DatBanBans);
 
                     await _datBanRepository.UpdateAsync(datBan);
 
                     await transaction.CommitAsync();
-                    return new Result<DatBan>(true, "Hủy bàn thành công!", datBan);
+                    return new Result<DatBan>(true, string.IsNullOrEmpty(lyDoHuy) ? "Hủy bàn thành công!" : $"Hủy bàn thành công! Lý do: {lyDoHuy}", datBan);
                 }
                 catch (Exception ex)
                 {
@@ -728,5 +637,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
                 GhiChu = bs.DatBan.GhiChu ?? "Không có"
             }).ToList<dynamic>();
         }
+
+       
     }
 }

@@ -28,5 +28,7 @@ namespace QuanLyNhaHang_DATN.Models
 
         [ForeignKey("DatBanId")]
         public DatBan DatBan { get; set; }
+
+        public int LanGoiMon { get; set; }
     }
 }

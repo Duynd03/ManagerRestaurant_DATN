@@ -12,6 +12,7 @@ namespace QuanLyNhaHang_DATN.Services.TaiKhoanService
         Task DangXuatAsync();
        // Task<bool> CheckExistUsernameAsync(string username);
         Task<Result<TaiKhoan>> CreateUserAsync(string username, string password, int quyenId, string tenNhanVien, string sdt, DateTime? ngaySinh, string diaChi);
+        Task<Result<TaiKhoan>> UpdateUserAsync(int nhanVienId, string tenNhanVien, string sdt, DateTime? ngaySinh, string diaChi, int quyenId);
         Task<List<Quyen>> GetAllQuyenAsync();
     }
 }

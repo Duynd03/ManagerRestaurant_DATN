@@ -111,6 +111,7 @@ namespace QuanLyNhaHang_DATN.Services.HoaDonService
             return await _context.HoaDons
                 .Include(hd => hd.DatBan)
                     .ThenInclude(db => db.KhachHang)
+                    .Include(hd => hd.NhanVien)
                     .ThenInclude(kh => kh.TaiKhoan)
                 .Include(hd => hd.DatBan)
                     .ThenInclude(db => db.DatBanBans)

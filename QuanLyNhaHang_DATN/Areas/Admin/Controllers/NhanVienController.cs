@@ -98,12 +98,12 @@ namespace QuanLyNhaHang_DATN.Controllers
         {
             var quyenList = await _taiKhoanService.GetAllQuyenAsync();
             ViewBag.QuyenList = quyenList;
-            return PartialView("_CreatePartial", new NhanVienViewModel());
+            return PartialView("_CreatePartial", new CreateNhanVienViewModel());
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([FromForm] NhanVienViewModel model)
+        public async Task<IActionResult> Create([FromForm] CreateNhanVienViewModel model)
         {
             try
             {
@@ -142,16 +142,14 @@ namespace QuanLyNhaHang_DATN.Controllers
                 return NotFound();
             }
 
-            var model = new NhanVienViewModel
+            var model = new UpdateNhanVienViewModel
             {
                 Id = nhanVien.Id,
                 TenNhanVien = nhanVien.TenNhanVien,
                 Sdt = nhanVien.Sdt,
                 NgaySinh = nhanVien.NgaySinh,
                 DiaChi = nhanVien.DiaChi,
-                Username = nhanVien.TaiKhoan?.UserName,
-                QuyenId = nhanVien.TaiKhoan?.QuyenId ?? 0,
-                TaiKhoanId = nhanVien.TaiKhoanId
+                QuyenId = nhanVien.TaiKhoan?.QuyenId ?? 0
             };
 
             ViewBag.QuyenList = await _taiKhoanService.GetAllQuyenAsync();
@@ -160,50 +158,34 @@ namespace QuanLyNhaHang_DATN.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit([FromForm] NhanVienViewModel model)
+        public async Task<IActionResult> Edit([FromForm] UpdateNhanVienViewModel model)
         {
             try
             {
+                if (model.Id <= 0)
+                {
+                    return Json(new { success = false, message = "Id nhân viên không hợp lệ." });
+                }
+                Console.WriteLine($"Id từ form: {model.Id}");
                 if (!ModelState.IsValid)
                 {
                     var validationErrors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
                     return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors = validationErrors });
                 }
 
-                var nhanVien = await _nhanVienService.GetByIdAsync(model.Id);
-                if (nhanVien == null)
+                var result = await _taiKhoanService.UpdateUserAsync(
+                    model.Id,
+                    model.TenNhanVien,
+                    model.Sdt,
+                    model.NgaySinh,
+                    model.DiaChi,
+                    model.QuyenId);
+
+                if (result.Success)
                 {
-                    return Json(new { success = false, message = "Nhân viên không tồn tại" });
+                    return Json(new { success = true, message = "Cập nhật nhân viên thành công" });
                 }
-
-                nhanVien.TenNhanVien = model.TenNhanVien;
-                nhanVien.Sdt = model.Sdt;
-                nhanVien.NgaySinh = model.NgaySinh;
-                nhanVien.DiaChi = model.DiaChi;
-
-                var taiKhoan = await _userManager.FindByIdAsync(model.TaiKhoanId.ToString());
-                if (taiKhoan == null)
-                {
-                    return Json(new { success = false, message = "Tài khoản không tồn tại" });
-                }
-
-                taiKhoan.QuyenId = model.QuyenId;
-                string roleName = model.QuyenId switch
-                {
-                    1 => "Quản lý",
-                    2 => "Nhân viên phục vụ",
-                    3 => "Kế toán",
-                    _ => throw new ArgumentException("QuyenId không hợp lệ.")
-                };
-
-                var currentRoles = await _userManager.GetRolesAsync(taiKhoan);
-                await _userManager.RemoveFromRolesAsync(taiKhoan, currentRoles);
-                await _userManager.AddToRoleAsync(taiKhoan, roleName);
-
-                await _nhanVienService.UpdateAsync(nhanVien);
-                await _userManager.UpdateAsync(taiKhoan);
-
-                return Json(new { success = true, message = "Cập nhật nhân viên thành công" });
+                return Json(new { success = false, message = result.Message });
             }
             catch (Exception ex)
             {
@@ -238,11 +220,6 @@ namespace QuanLyNhaHang_DATN.Controllers
                     return Json(new { success = false, message = "Dữ liệu không hợp lệ", errors = validationErrors });
                 }
 
-                if (model.NewPassword != model.ConfirmPassword)
-                {
-                    return Json(new { success = false, message = "Mật khẩu xác nhận không khớp" });
-                }
-
                 var taiKhoan = await _userManager.FindByIdAsync(model.TaiKhoanId.ToString());
                 if (taiKhoan == null)
                 {
@@ -257,44 +234,35 @@ namespace QuanLyNhaHang_DATN.Controllers
                     return Json(new { success = true, message = "Đổi mật khẩu thành công" });
                 }
 
-                var identityErrors = string.Join(", ", result.Errors.Select(e => e.Description));
-                return Json(new { success = false, message = $"Lỗi: {identityErrors}" });
+                var identityErrors = string.Join("\n", result.Errors.Select(e => e.Description));
+                return Json(new { success = false, message = $"Đổi mật khẩu thất bại:\n{identityErrors}" });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+                return Json(new { success = false, message = $"Lỗi hệ thống: {ex.Message}" });
             }
         }
 
+
         [HttpPost]
-        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int taiKhoanId)
         {
-            try
+            var taiKhoan = await _userManager.FindByIdAsync(taiKhoanId.ToString());
+            if (taiKhoan == null)
             {
-                var taiKhoan = await _userManager.FindByIdAsync(taiKhoanId.ToString());
-                if (taiKhoan == null)
-                {
-                    return Json(new { success = false, message = "Tài khoản không tồn tại" });
-                }
-
-                // Xóa tất cả quyền (roles) của tài khoản
-                var currentRoles = await _userManager.GetRolesAsync(taiKhoan);
-                if (currentRoles.Any())
-                {
-                    await _userManager.RemoveFromRolesAsync(taiKhoan, currentRoles);
-                }
-
-                // Cập nhật trạng thái thành Đã khóa
-                taiKhoan.TrangThai = TrangThaiTaiKhoan.DaKhoa;
-                await _userManager.UpdateAsync(taiKhoan);
-
-                return Json(new { success = true, message = "Khóa tài khoản thành công" });
+                return Json(new { success = false, message = "Tài khoản không tồn tại." });
             }
-            catch (Exception ex)
+
+            taiKhoan.TrangThai = TrangThaiTaiKhoan.DaKhoa; // Chuyển sang Đã khóa
+            var result = await _userManager.UpdateAsync(taiKhoan);
+
+            if (!result.Succeeded)
             {
-                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+                return Json(new { success = false, message = "Khóa tài khoản thất bại." });
             }
+
+            return Json(new { success = true, message = "Khóa tài khoản thành công." });
         }
         private string GetEnumDisplayName<TEnum>(TEnum value) where TEnum : Enum
         {

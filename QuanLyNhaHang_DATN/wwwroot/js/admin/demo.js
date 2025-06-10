@@ -189,11 +189,11 @@ Circles.create({
 	styleText:    true
 })
 
-//Notify
+//notify
 $.notify({
 	icon: 'icon-bell',
-	title: 'Kaiadmin',
-	message: 'Premium Bootstrap 5 Admin Dashboard',
+	title: 'kaiadmin',
+	message: 'premium bootstrap 5 admin dashboard',
 },{
 	type: 'secondary',
 	placement: {

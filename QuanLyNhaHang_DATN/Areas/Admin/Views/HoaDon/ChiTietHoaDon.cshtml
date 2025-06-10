@@ -131,12 +131,15 @@
                                 }
                             </select>
                         </div>
-
+                       
                         <button type="button" id="btnConfirmPayment" class="btn btn-success">
                             <i class="fas fa-check-circle me-2"></i> Xác nhận thanh toán
                         </button>
                     </form>
                 }
+                <a href="@Url.Action("DownloadHoaDonPdf", "HoaDon", new { area = "Admin", id = Model.Id })" class="btn btn-primary @(Model.TrangThaiDisplay != "Đã thanh toán" ? "disabled" : "")">
+                    <i class="fas fa-download me-2"></i> Xuất hóa đơn
+                </a>
                 <a href="@Url.Action("HoaDonHienThoi", "HoaDon", new { area = "Admin" })" class="btn btn-secondary">
                     <i class="fas fa-arrow-left me-2"></i> Quay lại
                 </a>
@@ -182,7 +185,7 @@
                     success: function (response) {
                         if (response.success) {
                             alert(response.message);
-                            window.location.href = response.redirectUrl;
+                            window.location.reload();
                         } else {
                             alert(response.message || "Có lỗi khi xác nhận thanh toán.");
                         }

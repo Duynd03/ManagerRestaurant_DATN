@@ -1,0 +1,236 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Hóa Đơn - @(Model?.HoaDon?.MaHoaDon ?? "N/A")</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 10pt;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            color: #000;
+        }
+
+        .container {
+            width: 80mm;
+            margin: 0 auto;
+            padding: 2mm;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
+        }
+
+            .header h1 {
+                font-size: 14pt;
+                margin: 2px 0;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+
+            .header p {
+                font-size: 9pt;
+                margin: 2px 0;
+            }
+
+        .invoice-title {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 5px 0;
+            text-transform: uppercase;
+        }
+
+        .info-section {
+            margin-bottom: 5px;
+            font-size: 9pt;
+            width: 100%;
+        }
+
+            .info-section p {
+                margin: 3px 0;
+                display: flex;
+                justify-content: space-between;
+            }
+
+                .info-section p span:first-child {
+                    font-weight: bold;
+                }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            margin: 5px 0;
+        }
+
+        th, td {
+            padding: 3px 2px;
+            text-align: right;
+            border-bottom: 1px dashed #ccc;
+        }
+
+        th {
+            font-weight: bold;
+            text-align: center;
+        }
+
+        td:first-child {
+            text-align: left;
+        }
+
+        .total-section {
+            margin-top: 5px;
+            font-size: 9pt;
+            width: 100%;
+            text-align: right;
+        }
+
+        .total-line {
+            margin: 3px 0;
+        }
+
+        .total-label {
+            display: inline-block;
+            text-align: left;
+            min-width: 50mm;
+        }
+
+        .total-value {
+            display: inline-block;
+            text-align: right;
+            min-width: 25mm;
+        }
+
+        .grand-total {
+            font-weight: bold;
+        }
+
+        .dashed-line {
+            border-top: 1px dashed #000;
+            margin: 5px 0;
+        }
+
+        .footer {
+            font-size: 9pt;
+            margin-top: 10px;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .payment-method {
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        @@media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            .container {
+                width: 80mm;
+                padding: 2mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Nhà Hàng Bắc Việt</h1>
+            <p>Số 3, Cầu Giấy, Hà Nội</p>
+            <p>SĐT: 0123-456-789</p>
+            <div class="invoice-title">HÓA ĐƠN - @(Model?.HoaDon?.MaHoaDon ?? "N/A")</div>
+        </div>
+
+        <div class="info-section">
+            <p><span>Họ và tên khách hàng:</span> <span>@(Model?.HoaDon?.TenKhachHang ?? "N/A")</span></p>
+            <p><span>Số điện thoại:</span> <span>@(Model?.HoaDon?.SDT ?? "N/A")</span></p>
+            <p><span>Họ và tên liên hệ:</span> <span>@(Model?.HoaDon?.TenLienHe ?? "N/A")</span></p>
+            <p><span>Số điện thoại liên hệ:</span> <span>@(Model?.HoaDon?.SDTLienHe ?? "N/A")</span></p>
+            <p><span>Bàn:</span> <span>@(Model?.HoaDon?.Bans ?? "N/A")</span></p>
+            <p><span>Thời gian đặt bàn:</span> <span>@(Model?.HoaDon?.ThoiGianDatBan != default(DateTime) ? Model.HoaDon.ThoiGianDatBan.ToString("dd/MM/yyyy HH:mm") : "N/A")</span></p>
+            <p><span>Thời gian thanh toán:</span> <span>@(Model?.HoaDon?.ThoiGianThanhToan != default(DateTime) ? Model.HoaDon.ThoiGianThanhToan.ToString("dd/MM/yyyy HH:mm") : "Chưa thanh toán")</span></p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50%; text-align: left;">Tên món ăn</th>
+                    <th style="width: 15%;">SL</th>
+                    <th style="width: 20%;">Đơn giá</th>
+                    <th style="width: 15%;">Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var goiMonList = Model?.GoiMons as List<QuanLyNhaHang_DATN.ViewModels.GoiMonViewModel>;
+                    if (goiMonList?.Any() == true)
+                    {
+                        foreach (var item in goiMonList)
+                        {
+                            var thanhTien = item.SoLuong * item.Gia;
+                            <tr>
+                                <td style="text-align: left;">@(item?.TenMonAn ?? "N/A")</td>
+                                <td>@(item?.SoLuong ?? 0)</td>
+                                <td>@(item?.Gia.ToString("N0") ?? "0")</td>
+                                <td>@(thanhTien.ToString("N0"))</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #777;">Không có món ăn nào.</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <div class="total-section">
+            <div class="total-line">
+                <span class="total-label">Tổng tiền gọi món :</span>
+                <span class="total-value">@(Model?.HoaDon?.TongTienGoiMon.ToString("N0") ?? "0") VND</span>
+            </div>
+            <div class="total-line">
+                <span class="total-label">Tiền cọc :</span>
+                <span class="total-value">@(Model?.HoaDon?.TienCoc.ToString("N0") ?? "0") VND</span>
+            </div>
+            <div class="dashed-line"></div>
+            @{
+                var soTienTruocVat = (Model?.HoaDon?.TongTienGoiMon ?? 0) - (Model?.HoaDon?.TienCoc ?? 0);
+            }
+            <div class="total-line">
+                <span class="total-label">Số tiền trước thuế:</span>
+                <span class="total-value">@soTienTruocVat.ToString("N0") VND</span>
+            </div>
+            <div class="total-line">
+                <span class="total-label">Thuế VAT(10%) :</span>
+                <span class="total-value">+ @(Model?.HoaDon?.ThueVat.ToString("N0") ?? "0") VND</span>
+            </div>
+            <div class="dashed-line"></div>
+            <div class="total-line grand-total">
+                <span class="total-label">Tổng Tiền thanh toán:</span>
+                <span class="total-value">@(Model?.HoaDon?.TongTienThanhToan.ToString("N0") ?? "0") VND</span>
+            </div>
+            <div class="total-line payment-method">
+                <span class="total-label">Phương thức thanh toán:</span>
+                <span class="total-value">@(Model?.HoaDon?.PhuongThucThanhToanDisplay ?? "Chưa thanh toán")</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Cảm ơn quý khách đã sử dụng dịch vụ!</p>
+            <p>Chúc quý khách một ngày tốt lành!</p>
+        </div>
+    </div>
+</body>
+</html>

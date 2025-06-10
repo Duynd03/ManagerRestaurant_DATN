@@ -7,5 +7,6 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.ViewModels
         public string? TenKhachHang { get; set; }
         public string? SDT { get; set; }
         public TrangThaiBanDat? TrangThai { get; set; }
+      
     }
 }

@@ -6,6 +6,7 @@ using QuanLyNhaHang_DATN.Models;
 using QuanLyNhaHang_DATN.Repositories.NhanVienRepository;
 using QuanLyNhaHang_DATN.Repositories.TaiKhoanRepository;
 using QuanLyNhaHang_DATN.Services.KhachHangService;
+using QuanLyNhaHang_DATN.Services.NhanVienService;
 using QuanLyNhaHang_DATN.ViewModels;
 using System.Threading.Tasks;
 
@@ -15,21 +16,21 @@ namespace QuanLyNhaHang_DATN.Services.TaiKhoanService
     {
         private readonly ITaiKhoanRepository _taiKhoanRepository;
         private readonly IKhachHangService _khachHangService;
-        private readonly INhanVienRepository _nhanVienRepository;
+        private readonly INhanVienService _nhanVienService;
         private readonly UserManager<TaiKhoan> _userManager;
         private readonly SignInManager<TaiKhoan> _signInManager;
 
         public TaiKhoanService(
             ITaiKhoanRepository taiKhoanRepository,
             IKhachHangService khachHangService,
-            INhanVienRepository nhanVienRepository,
+           INhanVienService nhanVienService,
             AppDbContext context,
             UserManager<TaiKhoan> userManager,
             SignInManager<TaiKhoan> signInManager)
             : base(taiKhoanRepository, context)
         {
             _taiKhoanRepository = taiKhoanRepository;
-            _nhanVienRepository = nhanVienRepository;
+            _nhanVienService = nhanVienService;
             _khachHangService = khachHangService;
             _userManager = userManager;
             _signInManager = signInManager;
@@ -115,21 +116,19 @@ namespace QuanLyNhaHang_DATN.Services.TaiKhoanService
         }
 
         public async Task<Result<TaiKhoan>> CreateUserAsync(
-             string username,
-             string password,
-             int quyenId,
-             string tenNhanVien,
-             string sdt,
-             DateTime? ngaySinh,
-             string diaChi)
+            string username,
+            string password,
+            int quyenId,
+            string tenNhanVien,
+            string sdt,
+            DateTime? ngaySinh,
+            string diaChi)
         {
-            // Bước 1: Kiểm tra tên đăng nhập đã tồn tại chưa
             if (await _taiKhoanRepository.CheckExistUsernameAsync(username))
             {
                 return new Result<TaiKhoan>(false, "Tên tài khoản đã tồn tại.");
             }
 
-            // Bước 2: Tạo tài khoản mới
             var taiKhoan = new TaiKhoan
             {
                 UserName = username,
@@ -138,20 +137,19 @@ namespace QuanLyNhaHang_DATN.Services.TaiKhoanService
                 NgayTao = DateTime.Now
             };
 
-            var createResult = await _taiKhoanRepository.CreateAsync(taiKhoan, password);
+            var createResult = await _userManager.CreateAsync(taiKhoan, password);
             if (!createResult.Succeeded)
             {
                 var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
                 return new Result<TaiKhoan>(false, $"Tạo tài khoản thất bại: {errors}");
             }
 
-            // Bước 3: Gán vai trò cho tài khoản
             string roleName = quyenId switch
             {
-                1 => "Quản lý",
-                2 => "Nhân viên phục vụ",
-                3 => "Kế toán",
-                4 => "Khách hàng",
+                1 => "Admin",
+                2 => "NhanVien",
+                3 => "KeToan",
+                4 => "KhachHang",
                 _ => throw new ArgumentException("QuyenId không hợp lệ.")
             };
 
@@ -163,56 +161,93 @@ namespace QuanLyNhaHang_DATN.Services.TaiKhoanService
                 return new Result<TaiKhoan>(false, $"Gán vai trò thất bại: {roleErrors}");
             }
 
-            // Bước 4: Nếu là nhân viên hoặc kế toán, tạo thông tin nhân viên
             if (quyenId == 2 || quyenId == 3)
             {
-                // Kiểm tra xem có đủ thông tin để tạo nhân viên không
                 if (string.IsNullOrEmpty(tenNhanVien) || string.IsNullOrEmpty(sdt))
                 {
                     await _userManager.DeleteAsync(taiKhoan);
                     return new Result<TaiKhoan>(false, "Tên nhân viên và số điện thoại không được để trống.");
                 }
 
-                // Kiểm tra xem tài khoản đã có thông tin nhân viên chưa
-                var existingNhanVien = await _nhanVienRepository.GetByTaiKhoanIdAsync(taiKhoan.Id);
-                if (existingNhanVien != null)
+                var nhanVienResult = await _nhanVienService.TaoNhanVienAsync(tenNhanVien, sdt, ngaySinh, diaChi, taiKhoan.Id);
+                if (!nhanVienResult.Success)
                 {
                     await _userManager.DeleteAsync(taiKhoan);
-                    return new Result<TaiKhoan>(false, "Tài khoản này đã có thông tin nhân viên.");
+                    return new Result<TaiKhoan>(false, nhanVienResult.Message);
                 }
-
-                // Kiểm tra số điện thoại đã tồn tại chưa
-                if (await _nhanVienRepository.CheckExistSdtAsync(sdt))
-                {
-                    await _userManager.DeleteAsync(taiKhoan);
-                    return new Result<TaiKhoan>(false, "Số điện thoại đã được sử dụng.");
-                }
-
-                // Kiểm tra định dạng số điện thoại (10 chữ số)
-                if (!System.Text.RegularExpressions.Regex.IsMatch(sdt, @"^\d{10}$"))
-                {
-                    await _userManager.DeleteAsync(taiKhoan);
-                    return new Result<TaiKhoan>(false, "Số điện thoại phải có đúng 10 chữ số.");
-                }
-
-                // Tạo đối tượng nhân viên mới
-                var nhanVien = new NhanVien
-                {
-                    TenNhanVien = tenNhanVien,
-                    Sdt = sdt,
-                    NgaySinh = ngaySinh,
-                    DiaChi = diaChi,
-                    TaiKhoanId = taiKhoan.Id,
-                    NgayTao = DateTime.Now
-                };
-
-                // Lưu nhân viên vào database
-                await _context.NhanViens.AddAsync(nhanVien);
-                await _context.SaveChangesAsync();
             }
 
-            // Bước 5: Trả về kết quả thành công
             return new Result<TaiKhoan>(true, "Tạo tài khoản thành công.", taiKhoan);
+        }
+
+        public async Task<Result<TaiKhoan>> UpdateUserAsync(int nhanVienId, string tenNhanVien, string sdt, DateTime? ngaySinh, string diaChi, int quyenId)
+        {
+           
+            // Lấy nhân viên theo Id
+            var nhanVien = await _nhanVienService.GetByIdAsync(nhanVienId);
+            if (nhanVien == null)
+            {
+                return new Result<TaiKhoan>(false, "Nhân viên không tồn tại.");
+            }
+
+            // Cập nhật thông tin nhân viên
+            nhanVien.TenNhanVien = tenNhanVien;
+            nhanVien.Sdt = sdt;
+            nhanVien.NgaySinh = ngaySinh;
+            nhanVien.DiaChi = diaChi;
+
+            // Kiểm tra số điện thoại đã tồn tại chưa (trừ chính nhân viên đang cập nhật)
+            var existingNhanVienWithSdt = await _context.NhanViens
+                .FirstOrDefaultAsync(nv => nv.Sdt == sdt && nv.Id != nhanVienId);
+            if (existingNhanVienWithSdt != null)
+            {
+                return new Result<TaiKhoan>(false, "Số điện thoại đã được sử dụng.");
+            }
+
+            // Kiểm tra định dạng số điện thoại
+            if (!System.Text.RegularExpressions.Regex.IsMatch(sdt, @"^\d{10}$"))
+            {
+                return new Result<TaiKhoan>(false, "Số điện thoại phải có đúng 10 chữ số.");
+            }
+
+            // Lấy tài khoản
+            var taiKhoan = await _userManager.FindByIdAsync(nhanVien.TaiKhoanId.ToString());
+            if (taiKhoan == null)
+            {
+                return new Result<TaiKhoan>(false, "Tài khoản không tồn tại.");
+            }
+
+            // Cập nhật QuyenId
+            taiKhoan.QuyenId = quyenId;
+
+            // Ánh xạ QuyenId với vai trò
+            string roleName = quyenId switch
+            {
+                1 => "Admin",
+                2 => "NhanVien",
+                3 => "KeToan",
+                4 => "KhachHang",
+                _ => throw new ArgumentException("QuyenId không hợp lệ.")
+            };
+
+            // Xóa vai trò cũ và gán vai trò mới
+            var currentRoles = await _userManager.GetRolesAsync(taiKhoan);
+            if (currentRoles.Any())
+            {
+                await _userManager.RemoveFromRolesAsync(taiKhoan, currentRoles);
+            }
+
+            var roleResult = await _userManager.AddToRoleAsync(taiKhoan, roleName);
+            if (!roleResult.Succeeded)
+            {
+                return new Result<TaiKhoan>(false, $"Gán vai trò thất bại: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+            }
+
+            // Lưu thay đổi
+            await _nhanVienService.UpdateAsync(nhanVien);
+            await _userManager.UpdateAsync(taiKhoan);
+
+            return new Result<TaiKhoan>(true, "Cập nhật nhân viên thành công.", taiKhoan);
         }
 
         public async Task<List<Quyen>> GetAllQuyenAsync()

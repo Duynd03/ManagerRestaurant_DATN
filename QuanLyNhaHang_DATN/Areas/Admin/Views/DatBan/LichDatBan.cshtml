@@ -44,6 +44,12 @@
             </form>
         </div>
 
+        <div class="modal fade" id="huyDatBanModal" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content" id="huyDatBanContent"></div>
+            </div>
+        </div>
+
         <div class="card-body">
             <div class="table-responsive">
                     <table id="xepBanTable" class="table  table-striped table-hover" style="min-width: 1500px;">
@@ -172,34 +178,8 @@
                     });
                 }
                 $("#xepBanTable tbody").html(html);
-
-                // Thêm sự kiện click cho nút Hủy
-                $('.btn-huy-ban').off('click').on('click', function () {
-                    var datBanId = $(this).data('id');
-                    if (confirm('Bạn có chắc muốn hủy đơn đặt bàn này?')) {
-                        $.ajax({
-                            url: '/Admin/DatBan/HuyBan',
-                            type: 'POST',
-                            data: { datBanId: datBanId },
-                            headers: {
-                                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                            },
-                            success: function (response) {
-                                if (response.success) {
-                                    alert(response.message);
-                                    loadData();
-                                } else {
-                                    alert(response.message);
-                                }
-                            },
-                            error: function () {
-                                alert('Có lỗi xảy ra khi hủy bàn.');
-                            }
-                        });
-                    }
-                });
             }
-
+            
             // Hàm cập nhật phân trang
             function updatePagination(totalCount, pageIndex, pageSize) {
                 let totalPages = Math.ceil(totalCount / pageSize);
@@ -237,6 +217,51 @@
             window.hideSearchForm = function () {
                 document.getElementById('searchFormContainer').style.display = 'none';
             }
+            // Thêm sự kiện click cho nút Hủy
+            $(document).on('click', '.btn-huy-ban', function (e) {
+                e.preventDefault();
+                let datBanId = $(this).data('id');
+                $.ajax({
+                    url: "/Admin/DatBan/HuyBanForm",
+                    type: "GET",
+                    data: { datBanId: datBanId },
+                    success: function (data) {
+                        $("#huyDatBanContent").html(data);
+                        $("#huyDatBanModal").modal("show");
+                    },
+                    error: function (xhr, status, error) {
+                        console.error("Lỗi tải form hủy: ", error);
+                        console.error("Status: ", xhr.status);
+                        console.error("Response: ", xhr.responseText);
+                        alert("Không thể tải form hủy. Vui lòng kiểm tra console để xem chi tiết lỗi.");
+                    }
+                });
+            });
+
+            // Xử lý submit form hủy
+            $(document).on("submit", "#huyDatBanForm", function (e) {
+                e.preventDefault();
+                $.ajax({
+                    url: "/Admin/DatBan/HuyBan",
+                    type: "POST",
+                    data: $(this).serialize(),
+                    success: function (response) {
+                        if (response.success) {
+                            $("#huyDatBanModal").modal("hide");
+                            alert(response.message);
+                            loadData();
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error("Lỗi hủy đơn: ", error);
+                        console.error("Status: ", xhr.status);
+                        console.error("Response: ", xhr.responseText);
+                        alert("Lỗi khi hủy đơn đặt bàn. Vui lòng kiểm tra console.");
+                    }
+                });
+            });
 
             // Load dữ liệu ban đầu
             loadData(@ViewBag.PageIndex || 1, @ViewBag.PageSize || 5);

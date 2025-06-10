@@ -6,5 +6,6 @@
         public int SoLuong { get; set; }
         public decimal Gia { get; set; }
         public string TenMonAn { get; set; }
+
     }
 }

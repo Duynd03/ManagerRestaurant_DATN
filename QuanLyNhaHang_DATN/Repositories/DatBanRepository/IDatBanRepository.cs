@@ -5,6 +5,7 @@ namespace QuanLyNhaHang_DATN.Repositories.DatBanRepository
     public interface IDatBanRepository : IBaseRepository<DatBan>
     {
         Task<DatBan> CreateAsync(DatBan datBan);
+        Task<DatBan> GetDatBanByIdAsync(int id);
         Task<List<DatBan>> GetByTrangThaiAsync(TrangThaiBanDat trangThai);
         Task<bool> HasTimeConflictAsync(int banId, DateTime thoiGianDatBan);
         Task<DatBan> GetByIdWithDatBanBansAsync(int datBanId); // Lấy DatBan kèm DatBanBans

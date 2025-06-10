@@ -1,4 +1,4 @@
-﻿@model QuanLyNhaHang_DATN.ViewModels.NhanVienViewModel
+﻿@model QuanLyNhaHang_DATN.ViewModels.UpdateNhanVienViewModel
 @{
     var quyenList = ViewBag.QuyenList as List<QuanLyNhaHang_DATN.Models.Quyen>;
 }
@@ -8,49 +8,34 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-    <form id="editForm" asp-action="Edit" asp-controller="NhanVien" method="post" data-ajax="true" data-ajax-method="POST">
+    <form id="editForm" asp-action="Edit" asp-controller="NhanVien" method="post" data-ajax="true">
         @Html.AntiForgeryToken()
-        <input asp-for="Id" type="hidden" />
-        <input asp-for="TaiKhoanId" type="hidden" />
-        <div class="mb-3">
-            <label asp-for="TenNhanVien" class="form-label">Tên nhân viên</label>
-            <input asp-for="TenNhanVien" class="form-control" required />
-            <span asp-validation-for="TenNhanVien" class="text-danger"></span>
+        @Html.HiddenFor(m => m.Id)
+
+        <div class="form-group mb-3">
+            <label class="form-label">Tên nhân viên <span class="text-danger">*</span></label>
+            @Html.TextBoxFor(m => m.TenNhanVien, new { @class = "form-control", required = "required" })
+            @Html.ValidationMessageFor(m => m.TenNhanVien, "", new { @class = "text-danger" })
         </div>
-        <div class="mb-3">
-            <label asp-for="Sdt" class="form-label">Số điện thoại</label>
-            <input asp-for="Sdt" class="form-control" required pattern="\d{10}" title="Số điện thoại phải có đúng 10 chữ số" />
-            <span asp-validation-for="Sdt" class="text-danger"></span>
+        <div class="form-group mb-3">
+            <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+            @Html.TextBoxFor(m => m.Sdt, new { @class = "form-control", required = "required", pattern = @"\d{10}", title = "Số điện thoại phải có đúng 10 chữ số" })
+            @Html.ValidationMessageFor(m => m.Sdt, "", new { @class = "text-danger" })
         </div>
-        <div class="mb-3">
-            <label asp-for="NgaySinh" class="form-label">Ngày sinh</label>
-            <input asp-for="NgaySinh" class="form-control" type="date" />
-            <span asp-validation-for="NgaySinh" class="text-danger"></span>
+        <div class="form-group mb-3">
+            <label class="form-label">Ngày sinh</label>
+            @Html.TextBoxFor(m => m.NgaySinh, "{0:yyyy-MM-dd}", new { @class = "form-control", type = "date" })
+            @Html.ValidationMessageFor(m => m.NgaySinh, "", new { @class = "text-danger" })
         </div>
-        <div class="mb-3">
-            <label asp-for="DiaChi" class="form-label">Địa chỉ</label>
-            <input asp-for="DiaChi" class="form-control" />
-            <span asp-validation-for="DiaChi" class="text-danger"></span>
+        <div class="form-group mb-3">
+            <label class="form-label">Địa chỉ</label>
+            @Html.TextBoxFor(m => m.DiaChi, new { @class = "form-control" })
+            @Html.ValidationMessageFor(m => m.DiaChi, "", new { @class = "text-danger" })
         </div>
-        <div class="mb-3">
-            <label asp-for="Username" class="form-label">Tên tài khoản</label>
-            <input asp-for="Username" class="form-control" readonly />
-            <span asp-validation-for="Username" class="text-danger"></span>
-        </div>
-        <div class="mb-3">
-            <label asp-for="QuyenId" class="form-label">Quyền</label>
-            <select asp-for="QuyenId" class="form-select" required>
-                <option value="">-- Chọn quyền --</option>
-                @foreach (var quyen in quyenList)
-                {
-                    <option value="@quyen.Id" selected="@(Model.QuyenId == quyen.Id ? "selected" : null)">@quyen.Name</option>
-                }
-            </select>
-            <span asp-validation-for="QuyenId" class="text-danger"></span>
-        </div>
-        <div class="mb-3">
-            <label asp-for="TrangThaiDisplay" class="form-label">Trạng thái</label>
-            <input asp-for="TrangThaiDisplay" class="form-control" readonly />
+        <div class="form-group mb-3">
+            <label class="form-label">Quyền <span class="text-danger">*</span></label>
+            @Html.DropDownListFor(m => m.QuyenId, new SelectList(quyenList, "Id", "Name", Model.QuyenId), "-- Chọn quyền --", new { @class = "form-control", required = "required" })
+            @Html.ValidationMessageFor(m => m.QuyenId, "", new { @class = "text-danger" })
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
