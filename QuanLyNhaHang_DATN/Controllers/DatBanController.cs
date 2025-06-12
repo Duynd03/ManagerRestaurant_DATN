@@ -167,13 +167,26 @@ namespace QuanLyNhaHang_DATN.Controllers
                 ? new List<object>()
                 : JsonSerializer.Deserialize<List<object>>(existingNotificationsJson);
             notifications.Add(notification);
+
             await _cache.SetStringAsync(notificationKey, JsonSerializer.Serialize(notifications), new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1) // Lưu 1 ngày
             });
 
-            // Gửi thông báo qua SignalR (cho admin đang online)
-            await _hubContext.Clients.Group("Admins").SendAsync("ReceiveDatBanUpdate", notification);
+            // Gửi thông báo qua SignalR cho admin
+            await _hubContext.Clients.Group("Admins").SendAsync("ReceiveBookingNotification", new
+            {
+                DatBanId = datBan.Id,
+                Message = $"Bạn có đơn đặt bàn mới ID {datBan.Id} từ thanh toán online lúc {DateTime.Now:HH:mm dd/MM/yyyy}",
+                Time = DateTime.Now.ToString("HH:mm dd/MM/yyyy")
+            }, "NEW");
+
+            await _hubContext.Clients.All.SendAsync("ReceivePaymentNotification", new
+            {
+                Success = true,
+                DatBanId = datBan.Id,
+                Message = "Thanh toán thành công"
+            });
 
             return RedirectToAction("PaymentSuccess", new { datBanId = datBan.Id });
         }

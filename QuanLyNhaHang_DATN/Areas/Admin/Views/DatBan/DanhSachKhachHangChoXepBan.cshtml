@@ -121,7 +121,7 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script>
         $(document).ready(function () {
             let currentPageIndex = 1;
@@ -173,7 +173,7 @@
                                             <td>${item.cocTien}</td>
                                             <td>${item.tenLienHe || ""}</td>
                                             <td>${item.sdtLienHe || ""}</td>
-                                            <td><span class="badge bg-info">${item.trangThaiDisplay}</span></td>
+                                            <td><span class="badge bg-warning">${item.trangThaiDisplay}</span></td>
                                             <td>
                                                 <div class="d-flex gap-2">
                                                     <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/DanhSachBanTrong?datBanId=${item.id}">Xếp bàn</a>
@@ -318,43 +318,18 @@
             });
 
             // Tích hợp SignalR để cập nhật realtime
+           
             var connection = new signalR.HubConnectionBuilder().withUrl("/datBanHub").build();
 
-            connection.on("ReceiveDatBanUpdate", function (datBan) {
-                // Kiểm tra trạng thái và xem có bàn nào được xếp chưa
-                if (datBan.trangThai === @((int)QuanLyNhaHang_DATN.Models.TrangThaiBanDat.ChoXacNhan)) {
-                    // Gọi API để kiểm tra danh sách bàn đã xếp
-                    $.get(`/Admin/DatBan/GetBanGhep?datBanId=${datBan.id}`, function (danhSachBanGhep) {
-                        if (!danhSachBanGhep.bans || danhSachBanGhep.bans.length === 0) {
-                            // Thêm hàng mới vào bảng nếu chưa có bàn xếp
-                            var row = `<tr>
-                                                <td>${datBan.id}</td>
-                                                <td>${datBan.tenKhachHang || "Khách vãng lai"}</td>
-                                                <td>${datBan.sdt || ""}</td>
-                                                <td>${new Date(datBan.thoiGianDatBan).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
-                                                <td>${datBan.soLuongNguoi}</td>
-                                                <td>${datBan.cocTien}</td>
-                                                <td>${datBan.tenLienHe || ""}</td>
-                                                <td>${datBan.sdtLienHe || ""}</td>
-                                                <td>Chờ xác nhận</td>
-                                                <td>
-                                                    <a class="btn btn-sm btn-success xepBanBtn" href="/Admin/DatBan/DanhSachBanTrong?datBanId=${datBan.id}">Xếp bàn</a>
-                                                </td>
-                                            </tr>`;
-                            $("#datBanList tbody").prepend(row);
-                            alert("Có yêu cầu đặt bàn mới: ID " + datBan.id);
-                        }
-                    });
-                } else {
-                    // Nếu trạng thái thay đổi (không còn Chờ xác nhận), xóa hàng khỏi bảng
-                    $(`#datBanList tbody tr td:contains('${datBan.id}')`).closest('tr').remove();
+            connection.on("ReceiveBookingNotification", function (notification) {
+                if (notification.LoaiThongBao === "NEW") {
+                    loadData(1, currentPageSize); // Reload khi có đơn mới
                 }
             });
 
             connection.start().catch(function (err) {
                 console.error(err.toString());
             });
-            
 
             // Load dữ liệu ban đầu
             loadData(1, currentPageSize);

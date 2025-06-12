@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using QuanLyNhaHang_DATN.Areas.Admin.Models;
 using QuanLyNhaHang_DATN.Areas.Admin.ViewModels;
 using QuanLyNhaHang_DATN.Hubs;
@@ -12,6 +13,7 @@ using QuanLyNhaHang_DATN.Services.KhuVucBanService;
 using QuanLyNhaHang_DATN.ViewModels;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
     [Area("Admin")]
@@ -22,18 +24,21 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         private readonly IBanService _banService;
         private readonly IKhuVucBanService _khuVucBanService;
         private readonly IHubContext<DatBanHub> _hubContext;
+        private readonly IDistributedCache _cache;
         private const double DefaultDurationHours = 2.0;
 
         public DatBanController(
             IDatBanService datBanService,
             IBanService banService,
             IKhuVucBanService khuVucBanService,
-            IHubContext<DatBanHub> hubContext)
+            IHubContext<DatBanHub> hubContext,
+            IDistributedCache cache)
         {
             _datBanService = datBanService;
             _banService = banService;
             _khuVucBanService = khuVucBanService;
             _hubContext = hubContext;
+            _cache = cache;
         }
         public async Task<IActionResult> DanhSachBanTrong(int pageIndex = 1, int pageSize = 5, string? tenBan = null, int? khuVucBanId = null, int? datBanId = null, bool isChuyenBan = false)
         {
@@ -215,18 +220,20 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 }
 
                 var datBanUpdated = result.Data;
-                await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
-                {
-                    id = datBanUpdated.Id,
-                    tenKhachHang = datBanUpdated.KhachHang?.TenKhachHang ?? "Khách vãng lai",
-                    sdt = datBanUpdated.KhachHang?.SDT ?? string.Empty,
-                    thoiGianDatBan = datBanUpdated.ThoiGianDatBan,
-                    soLuongNguoi = datBanUpdated.SoLuongNguoi,
-                    cocTien = datBanUpdated.CocTien,
-                    tenLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.TenLienHe : string.Empty,
-                    sdtLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.SDTLienHe : string.Empty,
-                    trangThai = (int)datBanUpdated.TrangThai
-                });
+                //await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
+                //{
+                //    id = datBanUpdated.Id,
+                //    tenKhachHang = datBanUpdated.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                //    sdt = datBanUpdated.KhachHang?.SDT ?? string.Empty,
+                //    thoiGianDatBan = datBanUpdated.ThoiGianDatBan,
+                //    soLuongNguoi = datBanUpdated.SoLuongNguoi,
+                //    cocTien = datBanUpdated.CocTien,
+                //    tenLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.TenLienHe : string.Empty,
+                //    sdtLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.SDTLienHe : string.Empty,
+                //    trangThai = (int)datBanUpdated.TrangThai
+                //});
+                await NotificationHelper.SendDatBanNotificationAsync(_hubContext, _cache, "XEPBAN", datBanUpdated);
+
 
                 return Json(new { success = true, message = "Xếp bàn thành công!" });
             }
@@ -525,23 +532,29 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 }
 
                 var datBanUpdated = result.Data;
-                await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
-                {
-                    id = datBanUpdated.Id,
-                    tenKhachHang = datBanUpdated.KhachHang?.TenKhachHang ?? "Khách vãng lai",
-                    sdt = datBanUpdated.KhachHang?.SDT ?? string.Empty,
-                    thoiGianDatBan = datBanUpdated.ThoiGianDatBan,
-                    soLuongNguoi = datBanUpdated.SoLuongNguoi,
-                    cocTien = datBanUpdated.CocTien,
-                    tenLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.TenLienHe : string.Empty,
-                    sdtLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.SDTLienHe : string.Empty,
-                    trangThai = (int)datBanUpdated.TrangThai
-                });
+                //await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
+                //{
+                //    id = datBanUpdated.Id,
+                //    tenKhachHang = datBanUpdated.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                //    sdt = datBanUpdated.KhachHang?.SDT ?? string.Empty,
+                //    thoiGianDatBan = datBanUpdated.ThoiGianDatBan,
+                //    soLuongNguoi = datBanUpdated.SoLuongNguoi,
+                //    cocTien = datBanUpdated.CocTien,
+                //    tenLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.TenLienHe : string.Empty,
+                //    sdtLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.SDTLienHe : string.Empty,
+                //    trangThai = (int)datBanUpdated.TrangThai
+                //});
+                //await _hubContext.Clients.Group("Admins").SendAsync("SendBookingNotification", datBanUpdated, "UPDATE");
+
+
+               await NotificationHelper.SendDatBanNotificationAsync(_hubContext, _cache, "CHUYENBAN", datBanUpdated);
+
 
                 return Json(new { success = true, message = "Chuyển bàn thành công!" });
             }
             catch (Exception ex)
             {
+                //Console.WriteLine($"[ERROR] ChuyenBan failed: {ex.Message} at {DateTime.Now}");
                 return Json(new { success = false, message = $"Lỗi khi chuyển bàn: {ex.Message}" });
             }
         }
@@ -594,19 +607,21 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                 }
 
                 var datBanUpdated = result.Data;
-                await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
-                {
-                    id = datBanUpdated.Id,
-                    tenKhachHang = datBanUpdated.KhachHang?.TenKhachHang ?? "Khách vãng lai",
-                    sdt = datBanUpdated.KhachHang?.SDT ?? string.Empty,
-                    thoiGianDatBan = datBanUpdated.ThoiGianDatBan,
-                    soLuongNguoi = datBanUpdated.SoLuongNguoi,
-                    cocTien = datBanUpdated.CocTien,
-                    tenLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.TenLienHe : string.Empty,
-                    sdtLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.SDTLienHe : string.Empty,
-                    trangThai = (int)datBanUpdated.TrangThai
-                   
-                });
+                //await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
+                //{
+                //    id = datBanUpdated.Id,
+                //    tenKhachHang = datBanUpdated.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                //    sdt = datBanUpdated.KhachHang?.SDT ?? string.Empty,
+                //    thoiGianDatBan = datBanUpdated.ThoiGianDatBan,
+                //    soLuongNguoi = datBanUpdated.SoLuongNguoi,
+                //    cocTien = datBanUpdated.CocTien,
+                //    tenLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.TenLienHe : string.Empty,
+                //    sdtLienHe = datBanUpdated.IsDatHo == true ? datBanUpdated.SDTLienHe : string.Empty,
+                //    trangThai = (int)datBanUpdated.TrangThai
+
+                //});
+                await NotificationHelper.SendDatBanNotificationAsync(_hubContext, _cache, "HUY", datBanUpdated);
+
 
                 return Json(new { success = true, message = result.Message });
             }
@@ -736,18 +751,20 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
                 var datBan = result.Data;
 
-                await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
-                {
-                    id = datBan.Id,
-                    tenKhachHang = datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
-                    sdt = datBan.KhachHang?.SDT ?? string.Empty,
-                    thoiGianDatBan = datBan.ThoiGianDatBan,
-                    soLuongNguoi = datBan.SoLuongNguoi,
-                    cocTien = datBan.CocTien,
-                    tenLienHe = datBan.IsDatHo == true ? datBan.TenLienHe : string.Empty,
-                    sdtLienHe = datBan.IsDatHo == true ? datBan.SDTLienHe : string.Empty,
-                    trangThai = (int)datBan.TrangThai
-                });
+                //await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
+                //{
+                //    id = datBan.Id,
+                //    tenKhachHang = datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
+                //    sdt = datBan.KhachHang?.SDT ?? string.Empty,
+                //    thoiGianDatBan = datBan.ThoiGianDatBan,
+                //    soLuongNguoi = datBan.SoLuongNguoi,
+                //    cocTien = datBan.CocTien,
+                //    tenLienHe = datBan.IsDatHo == true ? datBan.TenLienHe : string.Empty,
+                //    sdtLienHe = datBan.IsDatHo == true ? datBan.SDTLienHe : string.Empty,
+                //    trangThai = (int)datBan.TrangThai
+                //});
+                // Cuối phương thức
+                await NotificationHelper.SendDatBanNotificationAsync(_hubContext, _cache, "NEW", datBan);
 
                 return Json(new { success = true, message = "Tạo đơn đặt bàn thành công!" });
             }
@@ -804,18 +821,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
                 var datBan = result.Data;
 
-                await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
-                {
-                    id = datBan.Id,
-                    tenKhachHang = datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
-                    sdt = datBan.KhachHang?.SDT ?? string.Empty,
-                    thoiGianDatBan = datBan.ThoiGianDatBan,
-                    soLuongNguoi = datBan.SoLuongNguoi,
-                    cocTien = datBan.CocTien,
-                    tenLienHe = datBan.IsDatHo == true ? datBan.TenLienHe : string.Empty,
-                    sdtLienHe = datBan.IsDatHo == true ? datBan.SDTLienHe : string.Empty,
-                    trangThai = (int)datBan.TrangThai
-                });
+                //await _hubContext.Clients.Group("Admins").SendAsync("ReceiveBookingNotification", datBan, "UPDATE");
 
                 return Json(new { success = true, message = "Cập nhật đơn đặt bàn thành công!" });
             }
@@ -919,6 +925,13 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
                     message = $"Lỗi khi tải dữ liệu: {ex.Message}"
                 });
             }
+        }
+        public async Task<IActionResult> GetUserNotifications()
+        {
+            var key = "notifs:all";
+            var notificationsJson = await _cache.GetStringAsync(key) ?? "[]";
+            var notifications = JsonSerializer.Deserialize<List<NotificationModel>>(notificationsJson) ?? new List<NotificationModel>();
+            return Json(new { success = true, data = notifications });
         }
         private string GetEnumDisplayName<TEnum>(TEnum value) where TEnum : Enum
         {

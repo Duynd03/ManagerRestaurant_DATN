@@ -468,114 +468,93 @@
     </script>
 
     <!-- Script xử lý SignalR -->
-    @section Scripts {
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
-        <script>
-            $(document).ready(function () {
-                // Tải thông báo từ Redis khi load trang
-                $.ajax({
-                    url: '@Url.Action("GetNotificationsFromRedis", "DatBan")',
-                    type: 'GET',
-                    success: function (response) {
-                        if (response.success) {
-                            response.data.forEach(function (notification) {
-                                let notificationCount = parseInt($('.notification').text()) || 0;
-                                notificationCount++;
-                                $('.notification').text(notificationCount);
-                                const notificationHtml = `
-                                    <a href="/Admin/DatBan/DanhSachKhachHangChoXepBan?datBanId=${notification.datBanId}">
-                                        <div class="notif-icon notif-primary">
-                                            <i class="fa fa-user-plus"></i>
-                                        </div>
-                                        <div class="notif-content">
-                                            <span class="block">${notification.message}</span>
-                                            <span class="time">${notification.time}</span>
-                                        </div>
-                                    </a>
-                                `;
-                                $('.notif-center').prepend(notificationHtml);
-                                $('.dropdown-title').text(`You have ${notificationCount} new notification${notificationCount !== 1 ? 's' : ''}`);
-                            });
-                        }
-                    },
-                    error: function (err) {
-                        console.error("Error fetching notifications from Redis:", err);
-                    }
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/datBanHub")
+            .withAutomaticReconnect()
+            .configureLogging(signalR.LogLevel.Information)
+            .build();
+
+        let notifs = [];
+
+        // Khởi tạo danh sách từ server khi load trang
+        async function loadInitialNotifications() {
+            try {
+                const response = await fetch('/Admin/DatBan/GetUserNotifications', {
+                    method: 'GET',
+                    credentials: 'include'
                 });
-
-                const connection = new signalR.HubConnectionBuilder()
-                    .withUrl("/datBanHub")
-                    .build();
-
-                connection.on("ReceiveDatBanUpdate", function (data) {
-                    try {
-                        console.log("Received ReceiveDatBanUpdate:", data);
-                        if (!data.datBanId || !data.message || !data.time) {
-                            console.error("Invalid notification data:", data);
-                            return;
-                        }
-
-                        let notificationCount = parseInt($('.notification').text()) || 0;
-                        notificationCount++;
-                        $('.notification').text(notificationCount);
-
-                        const notificationHtml = `
-                            <a href="/Admin/DatBan/DanhSachKhachHangChoXepBan?datBanId=${data.datBanId}">
-                                <div class="notif-icon notif-primary">
-                                    <i class="fa fa-user-plus"></i>
-                                </div>
-                                <div class="notif-content">
-                                    <span class="block">${data.message}</span>
-                                    <span class="time">${data.time}</span>
-                                </div>
-                            </a>
-                        `;
-                        $('.notif-center').prepend(notificationHtml);
-
-                        const maxNotifications = 10;
-                        const notifications = $('.notif-center').children();
-                        if (notifications.length > maxNotifications) {
-                            notifications.slice(maxNotifications).remove();
-                        }
-
-                        $('.dropdown-title').text(`You have ${notificationCount} new notification${notificationCount !== 1 ? 's' : ''}`);
-                    } catch (err) {
-                        console.error("Error processing notification:", err.toString());
-                    }
-                });
-
-                function clearNotifications() {
-                    $('.notification').text('0');
-                    $('.dropdown-title').text('You have 0 new notification');
-                    $('.notif-center').empty();
-                    $.ajax({
-                        url: '@Url.Action("ClearNotificationsFromRedis", "DatBan")',
-                        type: 'POST',
-                        headers: {
-                            "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
-                        },
-                        success: function () {
-                            console.log("Notifications cleared from Redis");
-                        },
-                        error: function (err) {
-                            console.error("Error clearing notifications from Redis:", err);
-                        }
-                    });
+                const data = await response.json();
+                if (data.success) {
+                    notifs = data.data || [];
+                    renderNotifications(notifs);
                 }
+            } catch (error) {
+                console.error('Lỗi khi tải thông báo ban đầu:', error);
+            }
+        }
 
-                connection.start().then(function () {
-                    console.log("SignalR connected successfully");
-                    connection.invoke("JoinAdminGroup").then(() => {
-                        console.log("Successfully joined Admins group");
-                    }).catch(function (err) {
-                        console.error("Error joining Admins group:", err.toString());
-                    });
-                }).catch(function (err) {
-                    console.error("Error connecting to SignalR:", err.toString());
-                });
+        // Nhận thông báo từ server
+        connection.on("ReceiveBookingNotification", function (notif) {
+            console.log("📥 Nhận thông báo từ server:", notif); // Thêm log để kiểm tra dữ liệu
+            notifs.unshift(notif);
+            renderNotifications(notifs);
+
+            Swal.fire({
+                icon: notif.loaiThongBao === "NEW" ? 'success' : notif.loaiThongBao === "HUY" ? 'warning' : 'info',
+                title: 'Thông báo mới',
+                text: notif.message || "(Không có nội dung)",
+                timer: 3000,
+                showConfirmButton: false
             });
-        </script>
-    }
+        });
+
+        // Hiển thị danh sách thông báo
+        function renderNotifications(list) {
+            $('.notif-center').empty();
+            $('.notification').text(list.length);
+            $('.dropdown-title').text(`You have ${list.length} new notification${list.length !== 1 ? 's' : ''}`);
+
+            for (let notif of list) {
+                const msg = notif.message || "(Không có nội dung)";
+                const timeObj = new Date(notif.time);
+                const timeStr = isNaN(timeObj) ? "--:--" : timeObj.toLocaleString('vi-VN');
+                const datBanId = notif.datBanId || 0;
+
+                let linkUrl = `/Admin/DatBan/DanhSachKhachHangChoXepBan?datBanId=${datBanId}`;
+                if (notif.loaiThongBao === "XEPBAN" || notif.loaiThongBao === "CHUYENBAN")
+                    linkUrl = `/Admin/DatBan/LichDatBan?datBanId=${datBanId}`;
+                else if (notif.loaiThongBao === "HUY")
+                    linkUrl = `/Admin/DatBan/LichSuDatBan?datBanId=${datBanId}`;
+
+                $('.notif-center').append(`
+                        <a href="${linkUrl}" class="dropdown-item">
+                            <i class="fa fa-user-plus text-primary"></i> ${msg} <span>${timeStr}</span>
+                        </a>
+                    `);
+            }
+        }
+
+        // Xóa toàn bộ thông báo
+        function clearNotifications() {
+            notifs = [];
+            renderNotifications([]);
+        }
+
+        // Khởi chạy khi trang load
+        document.addEventListener("DOMContentLoaded", () => {
+            loadInitialNotifications();
+            connection.start()
+                .then(() => {
+                    console.log("✅ SignalR connected");
+                })
+                .catch(err => {
+                    console.error("❌ SignalR connection failed:", err);
+                });
+        });
+    </script>
+
    
     @RenderSection("Scripts", required: false)
 </body>
