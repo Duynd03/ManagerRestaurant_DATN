@@ -751,19 +751,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
                 var datBan = result.Data;
 
-                //await _hubContext.Clients.All.SendAsync("ReceiveDatBanUpdate", new
-                //{
-                //    id = datBan.Id,
-                //    tenKhachHang = datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
-                //    sdt = datBan.KhachHang?.SDT ?? string.Empty,
-                //    thoiGianDatBan = datBan.ThoiGianDatBan,
-                //    soLuongNguoi = datBan.SoLuongNguoi,
-                //    cocTien = datBan.CocTien,
-                //    tenLienHe = datBan.IsDatHo == true ? datBan.TenLienHe : string.Empty,
-                //    sdtLienHe = datBan.IsDatHo == true ? datBan.SDTLienHe : string.Empty,
-                //    trangThai = (int)datBan.TrangThai
-                //});
-                // Cuối phương thức
+               
                 await NotificationHelper.SendDatBanNotificationAsync(_hubContext, _cache, "NEW", datBan);
 
                 return Json(new { success = true, message = "Tạo đơn đặt bàn thành công!" });

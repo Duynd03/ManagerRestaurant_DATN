@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using QuanLyNhaHang_DATN.Areas.Admin.Models;
 using QuanLyNhaHang_DATN.Models;
@@ -9,6 +10,7 @@ using System.ComponentModel.DataAnnotations;
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin")]
     public class MonAnController : Controller
     {
         private readonly IMonAnService _monAnService;

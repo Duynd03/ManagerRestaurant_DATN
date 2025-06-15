@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using QuanLyNhaHang_DATN.Services.DashBoardService;
 
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin,KeToan")]
     public class DashBoardController : Controller
     {
         private readonly IDashBoardService _dashBoardService;

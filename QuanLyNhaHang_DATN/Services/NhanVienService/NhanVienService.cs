@@ -92,7 +92,10 @@ namespace QuanLyNhaHang_DATN.Services.NhanVienService
 
             return (items, totalCount);
         }
-
+        public async Task<NhanVien> GetByTaiKhoanIdAsync(int taiKhoanId)
+        {
+            return await _nhanVienRepository.GetByTaiKhoanIdAsync(taiKhoanId);
+        }
         public async Task<NhanVien> GetByIdAsync(int id)
         {
             return await _context.NhanViens

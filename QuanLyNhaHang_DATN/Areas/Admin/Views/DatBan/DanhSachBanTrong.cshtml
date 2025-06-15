@@ -173,45 +173,47 @@
                 html = '<tr><td colspan="' + (window.currentDatBanId ? 5 : 4) + '" class="text-center">Không có bàn nào phù hợp.</td></tr>';
             } else {
                 items.forEach(function (dataItem) {
+                    // // Xác định trạng thái của checkbox (đã chọn/bị vô hiệu hóa)
                     let isChecked = window.currentBanIds.includes(dataItem.id) || (dataItem.thongTinLichDat && dataItem.thongTinLichDat.isCurrentTable);
                     let isDisabled = !dataItem.thongTinLichDat.khaDung && !dataItem.thongTinLichDat.isCurrentTable;
 
                     html += '<tr>';
                     if (window.currentDatBanId) {
                         html += `<td>
-                                                    <input type="checkbox" name="banIds" value="${dataItem.id}"
-                                                           ${isChecked ? 'checked' : ''}
-                                                           ${isDisabled ? 'disabled' : ''}
-                                                           onchange="updateSelectedBanIds(this, ${currentPage})" />
-                                                </td>`;
+                               <input type="checkbox" name="banIds" value="${dataItem.id}"
+                                 ${isChecked ? 'checked' : ''}
+                                  ${isDisabled ? 'disabled' : ''}
+                                  onchange="updateSelectedBanIds(this, ${currentPage})" />
+                        </td>`;
                     }
                     html += `
-                                                <td>${dataItem.tenBan}</td>
-                                                <td>${dataItem.tenKhuVucBan || 'Không có khu vực'}</td>
-                                                <td>
-                                                    <span class="badge ${dataItem.trangThaiValue === 0 ? 'bg-success' : 'bg-warning'}">
-                                                        ${dataItem.trangThaiDisplay}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    ${dataItem.thongTinLichDat && dataItem.thongTinLichDat.lichDat.length > 0
+                                <td>${dataItem.tenBan}</td>
+                                <td>${dataItem.tenKhuVucBan || 'Không có khu vực'}</td>
+                                 <td>
+                                 <span class="badge ${dataItem.trangThaiValue === 0 ? 'bg-success' : 'bg-warning'}">
+                                  ${dataItem.trangThaiDisplay}
+                                  </span>
+                                  </td>
+                                  <td>
+                                 ${dataItem.thongTinLichDat && dataItem.thongTinLichDat.lichDat.length > 0
                             ? `<a href="#" class="view-schedule" data-ban-id="${dataItem.id}">Xem lịch</a>`
                             : 'Không có lịch'}
-                                                </td>
-                                            </tr>`;
+                                    </td>
+                      </tr>`;
                 });
             }
             $("#banTable tbody").html(html);
 
             if (window.currentDatBanId) {
+                // Gắn sự kiện cho checkbox selectAll
                 $("#selectAll").off('change').on('change', function () {
                     let maxAllowed = window.maxAllowedBans - $("input[name='banIds']:checked").not(this.checked ? [] : ":checked").length;
                     $("input[name='banIds']").not(":disabled").not(":checked").prop('checked', this.checked).each(function () {
-                        if (maxAllowed <= 0) $(this).prop('checked', false);
+                        if (maxAllowed <= 0) $(this).prop('checked', false); // // Không cho chọn thêm nếu vượt quá giới hạn
                         else maxAllowed--;
-                    }).trigger('change');
+                    }).trigger('change'); // // Kích hoạt sự kiện change để cập nhật trạng thái chọn
                 });
-
+                // Gắn sự kiện cho từng checkbox bàn
                 $("input[name='banIds']").off('change').on('change', updateSelectedBanIds);
 
                 updateSubmitButton();
@@ -234,19 +236,22 @@
                     return;
                 }
                 if (!window.currentBanIds.includes(banId)) {
+                    /// Nếu bàn chưa có trong danh sách -> thêm
                     window.currentBanIds.push(banId);
                 }
             } else {
                 window.currentBanIds = window.currentBanIds.filter(id => id !== banId);
             }
-
+            // Lưu danh sách bàn đã chọn vào Local Storage để duy trì trạng thái khi chuyển trang/tải lại
             localStorage.setItem('selectedBanIds_' + window.currentDatBanId, JSON.stringify(window.currentBanIds));
             updateSubmitButton();
         }
 
         function updateSubmitButton() {
             let selectedCount = window.currentBanIds.length;
+            //Vô hiệu hóa nút nếu số bàn chọn không nằm trong khoảng minAllowedBans và maxAllowedBans
             $("#submitBtn").prop('disabled', selectedCount < window.minAllowedBans || selectedCount > window.maxAllowedBans);
+            //Hiển thị/ẩn thông báo lỗi nếu số bàn chọn không hợp lệ
             $("#submitMessage").toggle(selectedCount < window.minAllowedBans || selectedCount > window.maxAllowedBans);
         }
 

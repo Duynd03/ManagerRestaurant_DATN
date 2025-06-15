@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuanLyNhaHang_DATN.Areas.Admin.Models;
 using QuanLyNhaHang_DATN.Areas.Admin.ViewModels;
@@ -8,6 +9,7 @@ using QuanLyNhaHang_DATN.Services.DanhMucService;
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin")]
     public class DanhMucController : Controller
     {
 

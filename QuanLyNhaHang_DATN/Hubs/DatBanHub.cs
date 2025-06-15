@@ -23,20 +23,6 @@ namespace QuanLyNhaHang_DATN.Hubs
             await base.OnConnectedAsync();
         }
 
-        //public async Task SendBookingNotification(DatBan datBan, string loaiThongBao)
-        //{
-        //    Console.WriteLine($"[SignalR] Sending to Admins group for DatBanId {datBan.Id} at {DateTime.Now}");
-        //    var notification = new
-        //    {
-        //        DatBanId = datBan.Id,
-        //        TenKhachHang = datBan.KhachHang?.TenKhachHang ?? "Khách vãng lai",
-        //        ThoiGianDatBan = datBan.ThoiGianDatBan.ToString("HH:mm dd/MM/yyyy"),
-        //        LoaiThongBao = loaiThongBao
-        //    };
-        //    await Clients.Group("Admins").SendAsync("ReceiveBookingNotification", notification, loaiThongBao);
-        //    Console.WriteLine($"[SignalR] Sent to Admins group for DatBanId {datBan.Id} at {DateTime.Now}");
-        //}
-
 
         //// Thêm client (admin) vào nhóm "Admins" khi kết nối.
         //public async Task JoinAdminGroup()
@@ -52,10 +38,6 @@ namespace QuanLyNhaHang_DATN.Hubs
         //{
         //    await Clients.Group("Admins").SendAsync("ReceiveDatBanUpdate", datBan);
         //}
-        ////Gửi thông báo xóa đặt bàn (dựa trên datBanId) khỏi danh sách chờ khi admin xếp bàn xong.
-        //public async Task SendRemoveDatBan(int datBanId)
-        //{
-        //    await Clients.Group("Admins").SendAsync("RemoveDatBan", datBanId);
-        //}
+        
     }
 }

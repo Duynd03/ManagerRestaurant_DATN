@@ -276,7 +276,7 @@
                 @:createSeries(@Html.Raw(Json.Serialize(Model.CompareTitle)), @Html.Raw(Json.Serialize(Model.DoanhThuSoSanh)), "#dc3545", 45);
             }
 
-                            var cursor = chart.set("cursor", am5xy.XYCursor.new(root, {
+                var cursor = chart.set("cursor", am5xy.XYCursor.new(root, {
                     behavior: "zoomX"
                 }));
                 cursor.lineY.set("visible", false);

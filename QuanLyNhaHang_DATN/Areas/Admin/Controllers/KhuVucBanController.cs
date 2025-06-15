@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using QuanLyNhaHang_DATN.Models;
 using QuanLyNhaHang_DATN.Services.DanhMucService;
 using QuanLyNhaHang_DATN.Services.KhuVucBanService;
@@ -6,6 +7,7 @@ using QuanLyNhaHang_DATN.Services.KhuVucBanService;
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin")]
     public class KhuVucBanController : Controller
     {
         private readonly IKhuVucBanService _khuVucBanService;

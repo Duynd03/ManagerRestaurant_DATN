@@ -16,6 +16,7 @@ using QuanLyNhaHang_DATN.Areas.Admin.ViewModels;
 namespace QuanLyNhaHang_DATN.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin")]
     public class NhanVienController : Controller
     {
         private readonly ITaiKhoanService _taiKhoanService;

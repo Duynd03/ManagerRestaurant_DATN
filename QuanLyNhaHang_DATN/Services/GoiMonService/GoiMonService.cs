@@ -50,7 +50,7 @@ namespace QuanLyNhaHang_DATN.Services.GoiMonService
             }
             await _goiMonRepository.SaveChangesAsync();
         }
-
+        // lấy lần gọi món gần nhất
         public async Task<int> GetMaxLanGoiMonAsync(int datBanId)
         {
             var goiMons = await _goiMonRepository.Query()

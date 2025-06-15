@@ -11,5 +11,6 @@ namespace QuanLyNhaHang_DATN.Services.NhanVienService
         Task<Result<NhanVien>> TaoNhanVienAsync(string tenNhanVien, string sdt, DateTime? ngaySinh, string diaChi, int taiKhoanId);
         Task<(IEnumerable<NhanVien> Items, int TotalCount)> GetPagedAsync(int pageIndex, int pageSize, NhanVienFilterModel filter);
         Task<NhanVien> GetByIdAsync(int id);
+        Task<NhanVien> GetByTaiKhoanIdAsync(int taiKhoanId);
     }
 }

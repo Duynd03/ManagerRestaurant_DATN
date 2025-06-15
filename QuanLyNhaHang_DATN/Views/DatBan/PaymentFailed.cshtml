@@ -1,10 +1,25 @@
-﻿@{
+﻿
+
+@{
     ViewData["Title"] = "Thanh toán thất bại";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container text-center my-5 pb-5">
-    <h2 class="text-danger">Thanh toán thất bại</h2>
-    <p>@ViewBag.Message</p>
-    <a href="@Url.Action("Create", "DatBan")" class="btn btn-primary mt-3">Thử lại</a>
+<!-- Hero Start -->
+<div class="py-5 bg-dark hero-header mb-5">
+    <div class="container text-center my-5 pt-5 pb-4">
+        <h1 class="display-3 text-white mb-3 animated slideInDown">Kết quả thanh toán</h1>
+    </div>
 </div>
+<!-- Hero End -->
+<!-- Content Start -->
+<div class="container-xxl py-5">
+    <div class="container">
+        <div class="text-center wow fadeInUp" data-wow-delay="0.1s">
+            <h2 class="text-danger">Thanh toán thất bại</h2>
+           
+            <a href="@Url.Action("Create", "DatBan")" class="btn btn-primary mt-3">Thử lại</a>
+        </div>
+    </div>
+</div>
+<!-- Content End -->

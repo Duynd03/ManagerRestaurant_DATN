@@ -141,7 +141,8 @@
                                 <td>
                                     <div class="d-flex gap-2">
                                         <button class="btn btn-sm btn-warning editBtn" data-id="${item.id}">Cập nhật</button> <!-- Đảm bảo data-id lấy từ item.id -->
-                                        <button class="btn btn-sm btn-info changePasswordBtn" data-taiKhoanId="${item.taiKhoanId || ''}">Đổi mật khẩu</button>
+                                               <button class="btn btn-sm btn-info changePasswordBtn" data-taikhoanid="${item.taiKhoanId}">Đổi mật khẩu</button>
+
                                         <button class="btn btn-sm btn-danger deleteBtn" data-taiKhoanId="${item.taiKhoanId || ''}">Khóa</button>
                                     </div>
                                 </td>
@@ -309,9 +310,10 @@
 
             $(document).on("click", ".changePasswordBtn", function (e) {
                 e.preventDefault();
-                let taiKhoanId = $(this).data("taiKhoanId");
+                let taiKhoanId = $(this).data("taikhoanid");
+              
                 $.ajax({
-                    url: "/Admin/NhanVien/ChangePassword/" + taiKhoanId,
+                    url: "/Admin/NhanVien/ChangePassword?taiKhoanId=" + taiKhoanId,
                     type: "GET",
                     success: function (data) {
                         $("#changePasswordModalContent").html(data);

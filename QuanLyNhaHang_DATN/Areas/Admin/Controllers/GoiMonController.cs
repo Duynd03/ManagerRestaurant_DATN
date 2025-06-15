@@ -10,10 +10,12 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using QuanLyNhaHang_DATN.Services.HoaDonService;
 using QuanLyNhaHang_DATN.Services.DatBanService;
+using Microsoft.AspNetCore.Authorization;
 
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin,NhanVien")]
     public class GoiMonController : Controller
     {
         private readonly IDanhMucService _danhMucService;
@@ -67,7 +69,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         {
             var filter = new QuanLyNhaHang_DATN.Areas.Admin.Models.MonAnFilterModel
             {
-                DanhMucId = danhMucId, // Lọc theo DanhMucId
+                DanhMucId = danhMucId, 
                 TrangThai = (int?)TrangThaiMonAn.CoSan
             };
             var (items, totalCount) = await _monAnService.GetPagedAsync(pageIndex, pageSize, filter);
@@ -89,7 +91,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
             });
         }
 
-        // Lưu danh sách gọi món từ ViewModel
+        // Lưu danh sách gọi món
         [HttpPost]
         public async Task<IActionResult> SaveGoiMon(SaveGoiMonRequest request)
         {
@@ -124,7 +126,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ClearUnsavedGoiMon(int datBanId)
+        public async Task<IActionResult> GetLatestGoiMonAsync(int datBanId)
         {
             if (datBanId <= 0)
             {

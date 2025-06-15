@@ -127,8 +127,15 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 
                     // Đăng nhập với SignInManager
                     await _signInManager.SignInAsync(user, isPersistent: false);
-
-                    return Json(new { success = true, redirectUrl = Url.Action("Index", "DashBoard", new { area = "Admin" }) });
+                    // Điều hướng dựa trên vai trò
+                    string redirectUrl = user.QuyenId switch
+                    {
+                        1 => Url.Action("Index", "DashBoard", new { area = "Admin" }), // Admin
+                        3 => Url.Action("Index", "DashBoard", new { area = "Admin" }), // Kế toán
+                        2 => Url.Action("DanhSachKhachHangChoXepBan", "DatBan", new { area = "Admin" }) // Nhân viên
+                    };
+                    return Json(new { success = true, redirectUrl });
+                   // return Json(new { success = true, redirectUrl = Url.Action("Index", "DashBoard", new { area = "Admin" }) });
                 }
 
                 return Json(new { success = false, message = result.Message });

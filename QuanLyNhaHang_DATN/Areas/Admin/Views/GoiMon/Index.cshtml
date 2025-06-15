@@ -8,10 +8,10 @@
 <div class="container mt-5">
     <div class="card border-info shadow-lg" style="border-width: 2px !important;">
         <div class="card-header text-white d-flex align-items-center justify-content-between p-3">
-            <h4 class="card-title mb-0">Lịch xếp bàn</h4>
+            <h4 class="card-title mb-0">Gọi Món</h4>
         </div>
         <div class="card-body">
-            <!-- Danh sách danh mục và giỏ hàng -->
+           
             <div class="row">
                 <!-- Danh sách danh mục -->
                 <div class="col-md-4">
@@ -158,7 +158,7 @@
                         <i class="fas fa-save me-1"></i> Lưu lại
                     </button>
                     <button class="btn btn-success shadow-sm" onclick="createHoaDon()">
-                        <i class="fas fa-receipt me-1"></i> Xuất hóa đơn
+                        <i class="fas fa-receipt me-1"></i> Tạo hóa đơn
                     </button>
                 </div>
             </div>
@@ -219,7 +219,7 @@
             });
         };
 
-        // Thêm món vào giỏ hàng
+        // Thêm món vào
         window.addToCart = function (id, tenMonAn, gia, lan) {
             let existingItem = selectedMonAnList.find(item => item.MonAnId === id && item.LanGoiMon === lan);
             if (existingItem) {
@@ -338,7 +338,7 @@
                 return;
             }
 
-            if (confirm("Bạn có chắc chắn muốn tạo hóa đơn cho đặt bàn này? Sau khi tạo, vui lòng kiểm tra tại danh sách hóa đơn.")) {
+            if (confirm("Bạn có chắc chắn muốn tạo hóa đơn cho đặt bàn này? ")) {
                 $.ajax({
                     url: "/Admin/HoaDon/CreateHoaDon",
                     type: "POST",

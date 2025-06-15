@@ -1,5 +1,6 @@
 ﻿using DinkToPdf;
 using DinkToPdf.Contracts;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewEngines;
@@ -19,6 +20,7 @@ using System.Threading.Tasks;
 namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin,KeToan")]
     public class HoaDonController : Controller
     {
         private readonly IHoaDonService _hoaDonService;
@@ -140,7 +142,7 @@ namespace QuanLyNhaHang_DATN.Areas.Admin.Controllers
         [HttpPost]
         public async Task<IActionResult> XacNhanThanhToan(int id, int phuongThuc)
         {
-            Console.WriteLine($"ID nhận được: {id}, PhuongThuc nhận được: {phuongThuc}");
+           
             try
             {
                 if (id <= 0)

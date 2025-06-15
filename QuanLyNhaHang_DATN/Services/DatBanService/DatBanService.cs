@@ -143,7 +143,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
                         return new Result<DatBan>(false, "Đơn đặt bàn không tồn tại.", null);
 
 
-                    if (viewModel.ThoiGianDatBan < DateTime.Now) // 07:09 PM +07, 05/06/2025
+                    if (viewModel.ThoiGianDatBan < DateTime.Now) 
                         return new Result<DatBan>(false, "Thời gian đặt bàn phải lớn hơn hiện tại.", null);
 
                     // Cập nhật KhachHang
@@ -259,9 +259,6 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
                     if (datBan == null)
                         return new Result<DatBan>(false, "Đơn đặt bàn không tồn tại.", null, new List<string> { "Không tìm thấy đơn." });
 
-                    if (datBan.TrangThai != TrangThaiBanDat.ChoXacNhan)
-                        return new Result<DatBan>(false, "Đặt bàn không ở trạng thái chờ xác nhận.", null);
-
                     // Thêm kiểm tra để tránh xếp lại đơn đã có bàn
                     if (datBan.DatBanBans != null && datBan.DatBanBans.Any())
                         return new Result<DatBan>(false, "Đặt bàn đã được xếp, không thể xếp lại.", null);
@@ -316,7 +313,6 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
             }
         }
 
-        // Thêm phương thức để truy vấn BanSchedules
         public IQueryable<BanSchedule> GetBanSchedules()
         {
             return _context.BanSchedules.AsQueryable();
@@ -451,7 +447,7 @@ namespace QuanLyNhaHang_DATN.Services.DatBanService
             var displaySchedules = allSchedules
                 .Where(bs => bs.ThoiGianBatDau <= bookingEndTime && (bs.ThoiGianKetThuc == null || bs.ThoiGianKetThuc >= bookingTime))
                 .ToList();
-
+            //Kiểm tra xem bàn này có phải là bàn hiện tại của đơn đặt bàn k
             bool isCurrentTable = datBanId.HasValue && await _context.DatBan_Bans
                 .AnyAsync(dbb => dbb.DatBanId == datBanId.Value && dbb.BanId == banId);
             bool khaDung = status.TrangThaiValue == (int)TrangThaiBan.Trong || isCurrentTable;

@@ -140,19 +140,7 @@ namespace QuanLyNhaHang_DATN.Controllers
 
                 return RedirectToAction("PaymentFailed", new { message = "Thanh toán không thành công." });
             }
-            //await _hubContext.Clients.Group("Admins").SendAsync("ReceiveDatBanUpdate", datBan);
-            //await _hubContext.Clients.All.SendAsync("ReceivePaymentNotification", new
-            //{
-            //    Success = true,
-            //    DatBanId = datBan.Id,
-            //    Message = "Thanh toán thành công"
-            //});
-            //await _hubContext.Clients.Group("Admins").SendAsync("ReceiveDatBanUpdate", new
-            //{
-            //    datBanId = datBan.Id,
-            //    message = $"Bạn có đơn đặt bàn mới Id {datBan.Id}",
-            //    time = DateTime.Now.ToString("HH:mm dd/MM/yyyy")
-            //});
+            
             var notification = new
             {
                 datBanId = datBan.Id,
@@ -174,12 +162,7 @@ namespace QuanLyNhaHang_DATN.Controllers
             });
 
             // Gửi thông báo qua SignalR cho admin
-            await _hubContext.Clients.Group("Admins").SendAsync("ReceiveBookingNotification", new
-            {
-                DatBanId = datBan.Id,
-                Message = $"Bạn có đơn đặt bàn mới ID {datBan.Id} từ thanh toán online lúc {DateTime.Now:HH:mm dd/MM/yyyy}",
-                Time = DateTime.Now.ToString("HH:mm dd/MM/yyyy")
-            }, "NEW");
+            await NotificationHelper.SendDatBanNotificationAsync(_hubContext, _cache, "NEW", datBan);
 
             await _hubContext.Clients.All.SendAsync("ReceivePaymentNotification", new
             {
